@@ -116,13 +116,46 @@ public class E8Simulator {
 	}
 	
 	/**
-	 * Assembles a string representingt the location being written to by the current instruction
+	 * Assembles a string representing the location being written to by the current instruction
 	 * 
 	 * @return The location to be written to
 	 */
-	/*public String getStoredLocation() {
-		
-	}*/
+	public String getStoredLocation() {
+		switch(iType) {
+			//Register at bits 6-7
+			case ADD:
+			case SUB:
+			case AND:
+			case OR:
+			case XOR:
+			case NOT:
+			case BSL:
+			case BSR:
+				return E8Util.toRegister(instruction.substring(8, 10));
+				
+			//Immediate address
+			//because of how this and indirect are positioned, the 'register at bits 8-9' section is called
+			//if it stores to a register 
+			case MOV_INDEX:
+				if(instruction.charAt(5) == '1') {
+					return instruction.substring(8);
+				}
+				
+			//Indirect address
+			case MOV_INDIR:
+				if(instruction.charAt(5) == '1') {
+					return Integer.toString(registers[Integer.parseInt(instruction.substring(8, 10), 2)] + Integer.parseInt(instruction.substring(10), 2), 2);
+				}
+				
+			//Register at bits 8-9
+			case MOV_IMM:
+			case MOV_REG:
+				return E8Util.toRegister(instruction.substring(6, 8));
+				
+			default:
+				return "";
+		}
+	}
 	
 	/*
 	 * Local Test Methods

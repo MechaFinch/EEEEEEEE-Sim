@@ -12,8 +12,8 @@ public class LocalTest {
 		e8.setRegisters(new byte[] {5, 6, 7, 8});
 		
 		//                "                "
-		e8.setInstruction("1110100000000000");
+		e8.setInstruction("0100000001000000");
 		
-		System.out.println(e8.getLoadedLocations());
+		System.out.println(e8.getStoredLocation());
 	}
 }
