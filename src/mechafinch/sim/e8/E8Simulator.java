@@ -10,19 +10,50 @@ public class E8Simulator {
 	/*
 	 * VM Objects
 	 */
-	private byte[] RAM = new byte[256],		//RAM
-				   registers = new byte[4];	//Registers
-	private short[] ROM = new short[1024];	//ROM
+	private int[] RAM = new int[256],		//RAM
+				   registers = new int[4];	//Registers
+	private int[] ROM = new int[1024];	//ROM
 	
 	private String instruction = "0000000000000000";	//Current instruction (binary string)
 	private Instructions iType = Instructions.NOP;		//The type of the current instruction
+	private int instructionPointer = 0;					//The instruction pointer
+	
+	/*
+	 * Public Constructors
+	 */
+	/**
+	 * Full Constructor
+	 * 
+	 * @param nRAM Initial RAM state
+	 * @param nROM ROM
+	 * @param nRegisters Initial register states
+	 * @param nInstructionPointer Initial IP
+	 * @param nInstruction Initial loaded instruction
+	 */
+	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, int nInstructionPointer, String nInstruction) {
+		//Sanitize inputs
+		if(nRAM.length != 256) throw new IllegalArgumentException("RAM size must be 256 bytes");
+		if(nROM.length != 1024) throw new IllegalArgumentException("ROM size must be 1024x2 bytes");
+		if(nRegisters.length != 4) throw new IllegalArgumentException("Register size must be 4 bytes");
+		if(nInstructionPointer > 0x3FF || nInstructionPointer < 0) throw new IllegalArgumentException("Instruction pointer must be a 10-bit unsigned value");
+		if(nInstruction.length() != 16 /*|| nInstruction.matches("[10]+")*/) throw new IllegalArgumentException("Instruction must be a 16-bit binary string");
+		
+		//Apply inputs
+		RAM = nRAM;
+		ROM = nROM;
+		registers = nRegisters;
+		instructionPointer = nInstructionPointer;
+		instruction = nInstruction;
+		iType = Instructions.getEnumeratedInstruction(instruction);
+	}
 	
 	/*
 	 * UI Getters
 	 */
-	public byte[] getRAMState() { return RAM.clone(); }
-	public byte[] getRegisterState() { return registers.clone(); }
-	public short[] getROM() { return ROM.clone(); }
+	public int[] getRAMState() { return RAM.clone(); }
+	public int[] getRegisterState() { return registers.clone(); }
+	public int[] getROM() { return ROM.clone(); }
+	public int getIP() { return instructionPointer; }
 	public String getInstruction() { return instruction; }
 	
 	/**
@@ -167,8 +198,9 @@ public class E8Simulator {
 	 */
 	protected E8Simulator() {}
 	
-	protected void setRam(byte[] newRam) { RAM = newRam; }
-	protected void setRegisters(byte[] newRegisters) { registers = newRegisters; }
-	protected void setRom(short[] newRom) { ROM = newRom; }
+	protected void setRam(int[] newRam) { RAM = newRam; }
+	protected void setRegisters(int[] newRegisters) { registers = newRegisters; }
+	protected void setRom(int[] newRom) { ROM = newRom; }
+	protected void setIP(int newIP) { instructionPointer = newIP; }
 	protected void setInstruction(String newInst) { instruction = newInst; iType = Instructions.getEnumeratedInstruction(instruction); }
 }
