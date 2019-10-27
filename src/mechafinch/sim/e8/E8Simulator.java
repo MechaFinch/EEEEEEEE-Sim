@@ -10,19 +10,22 @@ public class E8Simulator {
 	/*
 	 * VM Objects
 	 */
-	private int[] RAM = new int[256],		//RAM
-				   registers = new int[4];	//Registers
-	private int[] ROM = new int[1024];	//ROM
+	private int[] RAM,		//RAM
+				  registers;//Registers
+	private int[] ROM;		//ROM
 	
-	private String instruction = "0000000000000000";	//Current instruction (binary string)
-	private Instructions iType = Instructions.NOP;		//The type of the current instruction
-	private int instructionPointer = 0;					//The instruction pointer
+	private String instruction;		//Current instruction (binary string)
+	private Instructions iType;		//The type of the current instruction
+	private int instructionPointer;	//The instruction pointer
+	private boolean cFlag = false;	//The carry flag
 	
 	/*
 	 * Public Constructors
 	 */
+	
 	/**
-	 * Full Constructor
+	 * Full/STATE Constructor <br>
+	 * Constructs an instance of the simulator to match a desired state
 	 * 
 	 * @param nRAM Initial RAM state
 	 * @param nROM ROM
@@ -30,13 +33,13 @@ public class E8Simulator {
 	 * @param nInstructionPointer Initial IP
 	 * @param nInstruction Initial loaded instruction
 	 */
-	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, int nInstructionPointer, String nInstruction) {
+	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, int nInstructionPointer, String nInstruction, boolean nCFlag) {
 		//Sanitize inputs
 		if(nRAM.length != 256) throw new IllegalArgumentException("RAM size must be 256 bytes");
 		if(nROM.length != 1024) throw new IllegalArgumentException("ROM size must be 1024x2 bytes");
 		if(nRegisters.length != 4) throw new IllegalArgumentException("Register size must be 4 bytes");
 		if(nInstructionPointer > 0x3FF || nInstructionPointer < 0) throw new IllegalArgumentException("Instruction pointer must be a 10-bit unsigned value");
-		if(nInstruction.length() != 16 /*|| nInstruction.matches("[10]+")*/) throw new IllegalArgumentException("Instruction must be a 16-bit binary string");
+		if(nInstruction.length() != 16 || !nInstruction.matches("[10]+")) throw new IllegalArgumentException("Instruction must be a 16-bit binary string");
 		
 		//Apply inputs
 		RAM = nRAM;
@@ -45,6 +48,28 @@ public class E8Simulator {
 		instructionPointer = nInstructionPointer;
 		instruction = nInstruction;
 		iType = Instructions.getEnumeratedInstruction(instruction);
+		cFlag = nCFlag;
+	}
+	
+	/**
+	 * RAM & ROM Constructor <br>
+	 * Constructs a new simulator instance with the given RAM and ROM
+	 * 
+	 * @param nRAM Initial RAM state
+	 * @param nROM ROM
+	 */
+	public E8Simulator(int[] nRAM, int[] nROM) {
+		this(nRAM, nROM, new int[4], 0, "0000000000000000", false);
+	}
+	
+	/**
+	 * ROM Constructor <br>
+	 * Constructs a new simulator instance with the given ROM and empty RAM
+	 * 
+	 * @param nROM ROM
+	 */
+	public E8Simulator(int[] nROM) {
+		this(new int[256], nROM);
 	}
 	
 	/*
@@ -196,7 +221,9 @@ public class E8Simulator {
 	/**
 	 * Local Blank Constructor
 	 */
-	protected E8Simulator() {}
+	protected E8Simulator() {
+		this(new int[256], new int[1024], new int[4], 0, "0000000000000000", false);
+	}
 	
 	protected void setRam(int[] newRam) { RAM = newRam; }
 	protected void setRegisters(int[] newRegisters) { registers = newRegisters; }
