@@ -80,6 +80,7 @@ public class E8Simulator {
 	public int[] getROM() { return ROM.clone(); }
 	public int getIP() { return instructionPointer; }
 	public String getInstruction() { return instruction; }
+	public boolean getCarryFlag() { return cFlag; }
 	
 	/**
 	 * Assembles a string representing the locations that the current instruction will load from for calculations, including
@@ -230,4 +231,5 @@ public class E8Simulator {
 	protected void setRom(int[] newRom) { ROM = newRom; }
 	protected void setIP(int newIP) { instructionPointer = newIP; }
 	protected void setInstruction(String newInst) { instruction = newInst; iType = Instructions.getEnumeratedInstruction(instruction); }
+	protected void setCarryFlag(boolean nCarry) { cFlag = nCarry; }
 }
