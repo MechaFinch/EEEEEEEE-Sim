@@ -10,7 +10,10 @@ import mechafinch.sim.e8.E8Simulator;
 public class E8SimTest {
 	public static void main(String[] args) {
 		int[] rom = new int[1024],
-			  romContents = new int[] {0b001000_00_11111111};
+			  romContents = new int[] {0b001000_00_01000010,	//LD A, $42
+					  				   0b00110_1_00_11111111,	//ST A, [$3]
+					  				   0b00110_0_01_11111111	//LD B, [$3]
+					  				  };
 		TestUtil.insert(romContents, rom);
 		
 		System.out.println(TestUtil.hexString(rom));
