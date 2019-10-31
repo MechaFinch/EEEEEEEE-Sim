@@ -97,6 +97,23 @@ public class E8Simulator {
 				int reg = Integer.parseInt(instruction.substring(6, 8), 2);	//Register at bits 8-9
 				registers[reg] = Integer.parseInt(instruction.substring(8), 2);
 				break;
+				
+			case MOV_REG:
+				int sReg = Integer.parseInt(instruction.substring(8, 10), 2),	//Source register at 6-7
+					dReg = Integer.parseInt(instruction.substring(6, 8), 2);	//Destination register at 8-9
+				registers[dReg] = registers[sReg];
+				break;
+				
+			case MOV_INDEX:
+				reg = Integer.parseInt(instruction.substring(6, 8), 2);		//Destination register @ 8-9
+				int addr = Integer.parseInt(instruction.substring(8), 2);	//Address @ 0-7
+				
+				if(instruction.charAt(5) == '0') {	//0 if loading
+					registers[reg] = RAM[addr];
+				} else {							//1 if storing
+					RAM[addr] = registers[reg];
+				}
+				break;
 			
 			default: //NOP
 		}
