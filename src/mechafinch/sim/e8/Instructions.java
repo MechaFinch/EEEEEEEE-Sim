@@ -5,7 +5,7 @@ public enum Instructions {
 	ADD, SUB, AND, OR, XOR, NOT, BSL, BSR,
 	JMP_DIR, JMP_IND, JSR_DIR, JSR_IND, RET,
 	BEQ, BLT, BGT, BZ, BNZ,
-	HALT, NOP;
+	INT, NOP;
 	
 	public static Instructions getEnumeratedInstruction(String bin) {
 		if(bin.startsWith("00100")) { return MOV_IMM; }
@@ -33,7 +33,7 @@ public enum Instructions {
 		else if(bin.startsWith("10010")) { return BGT; }
 		else if(bin.startsWith("10011")) { return bin.charAt(7) == '0' ? BZ : BNZ; }
 		
-		else if(bin.startsWith("111")) { return HALT; }
+		else if(bin.startsWith("111")) { return INT; }
 		
 		return NOP;
 	}

@@ -157,15 +157,12 @@ public class E8Simulator {
 			case BNZ:
 				return E8Util.toRegister(instruction.substring(8, 10)) + ",IMM6";
 			
-			//Halt
-			case HALT:
-				if(instruction.charAt(3) == '1') {
-					if(instruction.charAt(4) == '0') { 
-						return "IMM8";
-					}
-					return E8Util.toRegister(instruction.substring(14));
+			//Interrupt
+			case INT:	//TODO: interrupts that i eventually implement might load from registers as well
+				if(instruction.charAt(7) == '0') {
+					return "IMM8";
 				}
-				return "";
+				return E8Util.toRegister(instruction.substring(14));
 			
 			default:
 				return "";
@@ -208,6 +205,8 @@ public class E8Simulator {
 			case MOV_IMM:
 			case MOV_REG:
 				return E8Util.toRegister(instruction.substring(6, 8));
+				
+			//TODO: the interrupts i eventually implement may store to registers
 				
 			default:
 				return "";
