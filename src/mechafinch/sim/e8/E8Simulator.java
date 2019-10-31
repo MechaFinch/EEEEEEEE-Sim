@@ -46,9 +46,9 @@ public class E8Simulator {
 		ROM = nROM;
 		registers = nRegisters;
 		instructionPointer = nInstructionPointer;
-		instruction = nInstruction;
-		iType = Instructions.getEnumeratedInstruction(instruction);
 		cFlag = nCFlag;
+		
+		updateInstruction();
 	}
 	
 	/**
@@ -81,6 +81,44 @@ public class E8Simulator {
 	public int getIP() { return instructionPointer; }
 	public String getInstruction() { return instruction; }
 	public boolean getCarryFlag() { return cFlag; }
+	
+	/**
+	 * Steps through the simulation
+	 * 
+	 * @return true if no exceptions occurred
+	 */
+	public boolean step() {
+		//Flags for later
+		boolean incIP = true;	//Do we need to increment the instruction pointer
+		
+		//Execute instruction
+		switch(iType) {
+			case MOV_IMM:
+				int reg = Integer.parseInt(instruction.substring(6, 8), 2);	//Register at bits 8-9
+				registers[reg] = Integer.parseInt(instruction.substring(8), 2);
+				break;
+			
+			default: //NOP
+		}
+		
+		//Load next instruction
+		if(incIP) instructionPointer++;
+		updateInstruction();
+		
+		return true;
+	}
+	
+	/**
+	 * Reset the simulator
+	 */
+	public void reset() {
+		RAM = new int[256];
+		registers = new int[4];
+		instructionPointer = 0;
+		cFlag = false;
+		
+		updateInstruction();
+	}
 	
 	/**
 	 * Assembles a string representing the locations that the current instruction will load from for calculations, including
@@ -231,4 +269,17 @@ public class E8Simulator {
 	protected void setIP(int newIP) { instructionPointer = newIP; }
 	protected void setInstruction(String newInst) { instruction = newInst; iType = Instructions.getEnumeratedInstruction(instruction); }
 	protected void setCarryFlag(boolean nCarry) { cFlag = nCarry; }
+	
+	/*
+	 * Private Methods
+	 * Internal stuff
+	 */
+	
+	/**
+	 * Update the current instruction, fetching it from ROM at the IP
+	 */
+	private void updateInstruction() {
+		instruction = String.format("%16s", Integer.toBinaryString(ROM[instructionPointer])).replace(' ', '0');
+		iType = Instructions.getEnumeratedInstruction(instruction);
+	}
 }
