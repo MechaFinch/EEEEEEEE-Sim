@@ -93,19 +93,22 @@ public class E8Simulator {
 		
 		//Execute instruction
 		switch(iType) {
+			/*
+			 * M Type Instructions
+			 */
 			case MOV_IMM:
-				int reg = Integer.parseInt(instruction.substring(6, 8), 2);	//Register at bits 8-9
-				registers[reg] = Integer.parseInt(instruction.substring(8), 2);
+				int reg = Integer.parseInt(instruction.substring(6, 8), 2);		//Register @ 8-9
+				registers[reg] = Integer.parseInt(instruction.substring(8), 2);	//Immediate @ 0-7
 				break;
 				
 			case MOV_REG:
-				int sReg = Integer.parseInt(instruction.substring(8, 10), 2),	//Source register at 6-7
-					dReg = Integer.parseInt(instruction.substring(6, 8), 2);	//Destination register at 8-9
+				int sReg = Integer.parseInt(instruction.substring(8, 10), 2),	//Source register @ 6-7
+					dReg = Integer.parseInt(instruction.substring(6, 8), 2);	//Destination register @ 8-9
 				registers[dReg] = registers[sReg];
 				break;
 				
 			case MOV_INDEX:
-				reg = Integer.parseInt(instruction.substring(6, 8), 2);		//Destination register @ 8-9
+				reg = Integer.parseInt(instruction.substring(6, 8), 2);		//S/D register @ 8-9
 				int addr = Integer.parseInt(instruction.substring(8), 2);	//Address @ 0-7
 				
 				if(instruction.charAt(5) == '0') {	//0 if loading
@@ -113,6 +116,36 @@ public class E8Simulator {
 				} else {							//1 if storing
 					RAM[addr] = registers[reg];
 				}
+				break;
+				
+			case MOV_INDIR:
+				reg = Integer.parseInt(instruction.substring(6, 8), 2);						//S/D register @ 8-9
+				sReg = Integer.parseInt(instruction.substring(8, 10), 2);					//Address register @ 6-7
+				addr = registers[sReg] + Integer.parseInt(instruction.substring(10), 2);	//Offset @ 0-5
+				
+				if(instruction.charAt(5) == '0') {	//0 if loading
+					registers[reg] = RAM[addr];
+				} else {							//1 if storing
+					RAM[addr] = registers[reg];
+				}
+				break;
+			
+			/*
+			 * A Type Instructions
+			 */
+			case ADD:
+				sReg = Integer.parseInt(instruction.substring(10, 12), 2);						//Register A @ 4-5
+				dReg = Integer.parseInt(instruction.substring(8, 10), 2);						//Destination @ 6-7
+				int res = registers[sReg] + (cFlag && instruction.charAt(6) == '1' ? 1 : 0);	//Init result to A + carry (if applicable)
+				
+				if(instruction.charAt(7) == '0') {	//0 if register
+					res += registers[Integer.parseInt(instruction.substring(14), 2)];
+				} else {							//1 if immediate
+					res += Integer.parseInt(instruction.substring(12), 2);
+				}
+				 
+				cFlag = (res & 0x1FF) > 255;	//Set carry flag
+				registers[dReg] = res & 0xFF;	//Set destination to lower 8 bits
 				break;
 			
 			default: //NOP

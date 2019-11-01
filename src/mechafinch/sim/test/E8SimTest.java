@@ -10,10 +10,11 @@ import mechafinch.sim.e8.E8Simulator;
 public class E8SimTest {
 	public static void main(String[] args) {
 		int[] rom = new int[1024],
-			  romContents = new int[] {0b001000_00_01000010,	//LD A, $42
-					  				   0b00110_1_00_11111111,	//ST A, [$3]
-					  				   0b00110_0_01_11111111	//LD B, [$3]
-					  				  };
+			  romContents = new int[] {
+				 0b00100000_00000011,	//LD A, $03
+				 0b01000001_01001110	//ADD B, A, $E
+		};
+		
 		TestUtil.insert(romContents, rom);
 		
 		System.out.println(TestUtil.hexString(rom));
@@ -26,21 +27,8 @@ public class E8SimTest {
 		}
 		
 		//Dump state, execute, dump again
-		dumpState(testSim);
+		TestUtil.dumpState(testSim);
 		testSim.step();
-		dumpState(testSim);
-	}
-	
-	/**
-	 * Dump the state of the VM
-	 * 
-	 * @param sim The isntance to dump
-	 */
-	static void dumpState(E8Simulator sim) {
-		System.out.println("\nInstruction: " + sim.getInstruction() +
-						   "\nInstruction Pointer: " + sim.getIP() +
-						   "\nRegisters: " + TestUtil.hexString(sim.getRegisterState()) +
-						   "\nRAM: " + TestUtil.hexString(sim.getRAMState()) +
-						   "\n");
+		TestUtil.dumpState(testSim);
 	}
 }

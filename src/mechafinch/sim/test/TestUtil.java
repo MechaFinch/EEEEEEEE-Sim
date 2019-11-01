@@ -1,11 +1,27 @@
 package mechafinch.sim.test;
 
+import mechafinch.sim.e8.E8Simulator;
+
 /**
  * A utility class for the two testing classes so methods dont have to be copy-pasted
  * 
  * @author Alex Pickering
  */
 public class TestUtil {
+	/**
+	 * Dump the state of the VM
+	 * 
+	 * @param sim The isntance to dump
+	 */
+	public static void dumpState(E8Simulator sim) {
+		System.out.println("\nInstruction: " + sim.getInstruction() +
+						   "\nInstruction Pointer: " + sim.getIP() +
+						   "\nRegisters: " + TestUtil.hexString(sim.getRegisterState()) +
+						   "\nRAM: " + TestUtil.hexString(sim.getRAMState()) +
+						   "\nCarry Flag: " + sim.getCarryFlag() +
+						   "\n");
+	}
+	
 	/**
 	 * Insert an array of integers at the start of a larger one
 	 * 
