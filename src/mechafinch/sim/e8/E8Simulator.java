@@ -216,6 +216,17 @@ public class E8Simulator {
 			case JSR_IND:
 				return E8Util.toRegister(instruction.substring(6, 8)) + ",IMM8";
 				
+			//Register or immediate
+			case PUSH:
+				s = "";
+				
+				if(instruction.charAt(7) == '0') {
+					s = E8Util.toRegister(instruction.substring(14));
+				} else {
+					s = "IMM8";
+				}
+				
+				return s;
 			
 			//Register and register or immediate
 			case ADD:
@@ -251,6 +262,15 @@ public class E8Simulator {
 					return "IMM8";
 				}
 				return E8Util.toRegister(instruction.substring(14));
+				
+			//Stack
+			case POP:
+			case PEEK:
+				return "STACK";
+				
+			//Call Stack
+			case RET:
+				return "CALLSTACK";
 			
 			default:
 				return "";
@@ -273,6 +293,8 @@ public class E8Simulator {
 			case NOT:
 			case BSL:
 			case BSR:
+			case POP:
+			case PEEK:
 				return E8Util.toRegister(instruction.substring(8, 10));
 				
 			//Immediate address
@@ -295,6 +317,15 @@ public class E8Simulator {
 				return E8Util.toRegister(instruction.substring(6, 8));
 				
 			//TODO: the interrupts i eventually implement may store to registers
+				
+			//Stack
+			case PUSH:
+				return "STACK";
+				
+			//Call Stack
+			case JSR_DIR:
+			case JSR_IND:
+				return "CALLSTACK";
 				
 			default:
 				return "";

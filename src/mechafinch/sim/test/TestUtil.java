@@ -19,6 +19,8 @@ public class TestUtil {
 						   "\nRegisters: " + TestUtil.hexString(sim.getRegisterState()) +
 						   "\nRAM: " + TestUtil.hexString(sim.getRAMState()) +
 						   "\nCarry Flag: " + sim.getCarryFlag() +
+						   "\nLoaded Locations: " + sim.getLoadedLocations() +
+						   "\nStored Location: " + sim.getStoredLocation() +
 						   "\n");
 	}
 	
