@@ -1,5 +1,7 @@
 package mechafinch.sim.e8;
 
+import java.util.ArrayDeque;
+
 /**
  * The class containing the simulator for E8
  * 
@@ -13,6 +15,9 @@ public class E8Simulator {
 	private int[] RAM,		//RAM
 				  registers;//Registers
 	private int[] ROM;		//ROM
+	
+	private ArrayDeque<Integer> callStack;
+	private ArrayDeque<Integer> dataStack;
 	
 	private String instruction;		//Current instruction (binary string)
 	private Instructions iType;		//The type of the current instruction
@@ -33,7 +38,7 @@ public class E8Simulator {
 	 * @param nInstructionPointer Initial IP
 	 * @param nInstruction Initial loaded instruction
 	 */
-	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, int nInstructionPointer, String nInstruction, boolean nCFlag) {
+	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, ArrayDeque<Integer> nDataStack, ArrayDeque<Integer> nCallStack, int nInstructionPointer, String nInstruction, boolean nCFlag) {
 		//Sanitize inputs
 		if(nRAM.length != 256) throw new IllegalArgumentException("RAM size must be 256 bytes");
 		if(nROM.length != 1024) throw new IllegalArgumentException("ROM size must be 1024x2 bytes");
@@ -45,6 +50,8 @@ public class E8Simulator {
 		RAM = nRAM;
 		ROM = nROM;
 		registers = nRegisters;
+		callStack = nCallStack;
+		dataStack = nDataStack;
 		instructionPointer = nInstructionPointer;
 		cFlag = nCFlag;
 		
@@ -59,7 +66,7 @@ public class E8Simulator {
 	 * @param nROM ROM
 	 */
 	public E8Simulator(int[] nRAM, int[] nROM) {
-		this(nRAM, nROM, new int[4], 0, "0000000000000000", false);
+		this(nRAM, nROM, new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false);
 	}
 	
 	/**
@@ -78,6 +85,8 @@ public class E8Simulator {
 	public int[] getRAMState() { return RAM.clone(); }
 	public int[] getRegisterState() { return registers.clone(); }
 	public int[] getROM() { return ROM.clone(); }
+	public ArrayDeque<Integer> getCallStack() { return callStack.clone(); }
+	public ArrayDeque<Integer> getDataStack() { return dataStack.clone(); } 
 	public int getIP() { return instructionPointer; }
 	public String getInstruction() { return instruction; }
 	public boolean getCarryFlag() { return cFlag; }
@@ -341,7 +350,7 @@ public class E8Simulator {
 	 * Local Blank Constructor
 	 */
 	protected E8Simulator() {
-		this(new int[256], new int[1024], new int[4], 0, "0000000000000000", false);
+		this(new int[256], new int[1024], new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false);
 	}
 	
 	protected void setRam(int[] newRam) { RAM = newRam; }

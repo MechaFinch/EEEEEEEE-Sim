@@ -1,5 +1,7 @@
 package mechafinch.sim.test;
 
+import java.util.ArrayDeque;
+
 import mechafinch.sim.e8.E8Simulator;
 
 /**
@@ -16,8 +18,10 @@ public class TestUtil {
 	public static void dumpState(E8Simulator sim) {
 		System.out.println("\nInstruction: " + sim.getInstruction() +
 						   "\nInstruction Pointer: " + sim.getIP() +
-						   "\nRegisters: " + TestUtil.hexString(sim.getRegisterState()) +
-						   "\nRAM: " + TestUtil.hexString(sim.getRAMState()) +
+						   "\nRegisters: " + hexString(sim.getRegisterState()) +
+						   "\nRAM: " + hexString(sim.getRAMState()) +
+						   "\nData Stack: " + hexString(sim.getDataStack()) +
+						   "\nCall Stack: " + hexString(sim.getCallStack()) +
 						   "\nCarry Flag: " + sim.getCarryFlag() +
 						   "\nLoaded Locations: " + sim.getLoadedLocations() +
 						   "\nStored Location: " + sim.getStoredLocation() +
@@ -69,6 +73,22 @@ public class TestUtil {
 		String s = Integer.toHexString(arr[0]);
 		
 		for(int i = 1; i < arr.length; i++) s += ", " + Integer.toHexString(arr[i]);
+		
+		return s;
+	}
+	
+	/**
+	 * Construct a comma & space separated hex string of an ArrayDeque
+	 * 
+	 * @param arr The ArrayDeque to convert
+	 * @return A comma and space separated string of the ArrayDeque
+	 */
+	public static String hexString(ArrayDeque<Integer> arr) {
+		if(arr.size() == 0) return "";
+		
+		String s = Integer.toHexString(arr.pop());
+		
+		while(arr.size() > 0) s += ", " + Integer.toHexString(arr.pop());
 		
 		return s;
 	}
