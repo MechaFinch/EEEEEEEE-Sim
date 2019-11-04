@@ -26,9 +26,9 @@ public class LocalTest {
 		
 		System.out.println("Instruction: " + e8.getInstruction() +
 						 "\nInstruction Pointer: " + e8.getIP() +
-						 "\nRAM: " + e8.getRAMState().length + " " + TestUtil.hexString(e8.getRAMState()) + //show length too
-						 "\nROM: " + e8.getROM().length + " " + TestUtil.hexString(e8.getROM()) +
-						 "\nRegisters: " + e8.getRegisterState().length + " " + TestUtil.hexString(e8.getRegisterState()) +
+						 "\nRAM: " + e8.getRAMState().length + " " + TestUtil.hexString(e8.getRAMState(), 8) + //show length too
+						 "\nROM: " + e8.getROM().length + " " + TestUtil.hexString(e8.getROM(), 10) +
+						 "\nRegisters: " + e8.getRegisterState().length + " " + TestUtil.hexString(e8.getRegisterState(), 8) +
 						 "\nCarry: " + e8.getCarryFlag());
 	}
 }
