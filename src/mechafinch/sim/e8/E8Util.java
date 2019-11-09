@@ -28,4 +28,15 @@ public class E8Util {
 				return "D";
 		}
 	}
+	
+	/**
+	 * Gets the integer value of a register index from the instruction at the given location
+	 * 
+	 * @param instruction The instruction string
+	 * @param location The start location of the two bits
+	 * @return The index of the register
+	 */
+	public static int getRegister(String instruction, int location) {
+		return Integer.parseInt(instruction.substring(location, location + 2), 2);
+	}
 }

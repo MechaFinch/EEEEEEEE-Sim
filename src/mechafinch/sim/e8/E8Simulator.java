@@ -106,18 +106,18 @@ public class E8Simulator {
 			 * M Type Instructions
 			 */
 			case MOV_IMM:
-				int reg = Integer.parseInt(instruction.substring(6, 8), 2);		//Register @ 8-9
+				int reg = E8Util.getRegister(instruction, 6);					//Register @ 8-9
 				registers[reg] = Integer.parseInt(instruction.substring(8), 2);	//Immediate @ 0-7
 				break;
 				
 			case MOV_REG:
-				int sReg = Integer.parseInt(instruction.substring(8, 10), 2),	//Source register @ 6-7
-					dReg = Integer.parseInt(instruction.substring(6, 8), 2);	//Destination register @ 8-9
+				int sReg = E8Util.getRegister(instruction, 8),	//Source register @ 6-7
+					dReg = E8Util.getRegister(instruction, 6);	//Destination register @ 8-9
 				registers[dReg] = registers[sReg];
 				break;
 				
 			case MOV_INDEX:
-				reg = Integer.parseInt(instruction.substring(6, 8), 2);		//S/D register @ 8-9
+				reg = E8Util.getRegister(instruction, 6);					//S/D register @ 8-9
 				int addr = Integer.parseInt(instruction.substring(8), 2);	//Address @ 0-7
 				
 				if(instruction.charAt(5) == '0') {	//0 if loading
@@ -128,8 +128,8 @@ public class E8Simulator {
 				break;
 				
 			case MOV_INDIR:
-				reg = Integer.parseInt(instruction.substring(6, 8), 2);						//S/D register @ 8-9
-				sReg = Integer.parseInt(instruction.substring(8, 10), 2);					//Address register @ 6-7
+				reg = E8Util.getRegister(instruction, 6);									//S/D register @ 8-9
+				sReg = E8Util.getRegister(instruction, 8);									//Address register @ 6-7
 				addr = registers[sReg] + Integer.parseInt(instruction.substring(10), 2);	//Offset @ 0-5
 				
 				if(instruction.charAt(5) == '0') {	//0 if loading
@@ -143,8 +143,8 @@ public class E8Simulator {
 			 * A Type Instructions
 			 */
 			case ADD:
-				sReg = Integer.parseInt(instruction.substring(10, 12), 2);						//Register A @ 4-5
-				dReg = Integer.parseInt(instruction.substring(8, 10), 2);						//Destination @ 6-7
+				sReg = E8Util.getRegister(instruction, 10);										//Register A @ 4-5
+				dReg = E8Util.getRegister(instruction, 8);										//Destination @ 6-7
 				int res = registers[sReg] + (cFlag && instruction.charAt(6) == '1' ? 1 : 0);	//Init result to A + carry (if applicable)
 				
 				if(instruction.charAt(7) == '0') {	//0 if register
@@ -155,6 +155,27 @@ public class E8Simulator {
 				 
 				cFlag = (res & 0x1FF) > 255;	//Set carry flag
 				registers[dReg] = res & 0xFF;	//Set destination to lower 8 bits
+				break;
+				
+			case SUB:
+				sReg = Integer.parseInt(instruction.substring(10, 12), 2);	//Reg A @ 4-5
+				dReg = Integer.parseInt(instruction.substring(8, 10), 2);	//Dest @ 6-7
+				int bVal = 0;
+				
+				//Get B
+				if(instruction.charAt(7) == '0') {	//Value is reg
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {							//Value is immediate
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				//Carry
+				bVal += (cFlag && instruction.charAt(6) == '1') ? 1 : 0;
+				cFlag = bVal > registers[sReg];
+				
+				//Apply & fix
+				res = registers[sReg] - bVal;
+				registers[dReg] = res & 0xFF;
 				break;
 			
 			default: //NOP

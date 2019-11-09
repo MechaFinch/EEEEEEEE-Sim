@@ -17,15 +17,15 @@ public class TestUtil {
 	 */
 	public static void dumpState(E8Simulator sim) {
 		System.out.println("\nInstruction: " + sim.getInstruction() +
-						   "\nInstruction Pointer: " + sim.getIP() +
-						   "\nRegisters: " + hexString(sim.getRegisterState()) +
-						   "\nRAM: " + hexString(sim.getRAMState()) +
-						   "\nData Stack: " + hexString(sim.getDataStack()) +
-						   "\nCall Stack: " + hexString(sim.getCallStack()) +
+						   "\nInstruction Pointer: " + String.format("%3s", Integer.toHexString(sim.getIP())).replace(' ', '0') +
+						   "\nRegisters: " + hexString(sim.getRegisterState(), 8) +
+						   "\nRAM: " + hexString(sim.getRAMState(), 8) +
+						   "\nData Stack: " + hexString(sim.getDataStack(), 8) +
+						   "\nCall Stack: " + hexString(sim.getCallStack(), 10) +
 						   "\nCarry Flag: " + sim.getCarryFlag() +
 						   "\nLoaded Locations: " + sim.getLoadedLocations() +
 						   "\nStored Location: " + sim.getStoredLocation() +
-						   "\n");
+						   "");
 	}
 	
 	/**
@@ -53,43 +53,31 @@ public class TestUtil {
 	 * Construct a comma & space separated hex string of an array
 	 * 
 	 * @param arr The array to convert
+	 * @param numBits The number of bits per value
 	 * @return A comma & space separated string of the array
 	 */
-	public static String hexString(int[] arr) {
-		String s = Integer.toHexString(arr[0]);
+	public static String hexString(int[] arr, int numBits) {
+		String s = "";
 		
-		for(int i = 1; i < arr.length; i++) s += ", " + Integer.toHexString(arr[i]);
+		for(int i = 0; i < arr.length; i++) s += ", " + String.format("%" + (numBits / 4) + "s", Integer.toHexString(arr[i])).replace(' ', '0');
 		
-		return s;
-	}
-	
-	/**
-	 * Construct a comma & space separated hex string of an array
-	 * 
-	 * @param arr The array to convert
-	 * @return A comma & space separated string of the array
-	 */
-	public static String hexString(short[] arr) {
-		String s = Integer.toHexString(arr[0]);
-		
-		for(int i = 1; i < arr.length; i++) s += ", " + Integer.toHexString(arr[i]);
-		
-		return s;
+		return s.substring(2);
 	}
 	
 	/**
 	 * Construct a comma & space separated hex string of an ArrayDeque
 	 * 
 	 * @param arr The ArrayDeque to convert
+	 * @param numBits The number of bits for each value
 	 * @return A comma and space separated string of the ArrayDeque
 	 */
-	public static String hexString(ArrayDeque<Integer> arr) {
+	public static String hexString(ArrayDeque<Integer> arr, int numBits) {
 		if(arr.size() == 0) return "";
 		
-		String s = Integer.toHexString(arr.pop());
+		String s = "";
 		
-		while(arr.size() > 0) s += ", " + Integer.toHexString(arr.pop());
+		while(arr.size() > 0) s += ", " + String.format("%" + (numBits / 4) + "s", Integer.toHexString(arr.pop())).replace(' ', '0');
 		
-		return s;
+		return s.substring(2);
 	}
 }
