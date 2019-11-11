@@ -39,4 +39,14 @@ public class E8Util {
 	public static int getRegister(String instruction, int location) {
 		return Integer.parseInt(instruction.substring(location, location + 2), 2);
 	}
+	
+	/**
+	 * Construct a 0-padded 8-bit binary string of a given integer
+	 * 
+	 * @param val The value to convert
+	 * @return A 0-padded 8 bit binary string
+	 */
+	public static String paddedBinaryString(int val) {
+		return String.format("%8s", Integer.toBinaryString(val)).replace(' ', '0');
+	}
 }

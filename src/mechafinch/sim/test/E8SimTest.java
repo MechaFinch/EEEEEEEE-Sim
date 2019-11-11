@@ -1,5 +1,7 @@
 package mechafinch.sim.test;
 
+import java.io.IOException;
+
 import mechafinch.sim.e8.E8Simulator;
 
 /**
@@ -8,15 +10,17 @@ import mechafinch.sim.e8.E8Simulator;
  * @author Alex Pickering
  */
 public class E8SimTest {
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		int[] rom = new int[1024],
-			  romContents = new int[] {	//Test 0x033d - 0x02e6 = 0x0057
-				0b00100000_00000011,	//LD A, $03
-				0b00100001_00111101,	//LD B, $3D
-				0b00100010_00000010,	//LD C, $02
-				0b00100011_11100110,	//LD D, $E6
-				0b01000100_11010011,	//SUB D, B, D
-				0b01000110_10000010,	//SUBC C, A, C	Regs: $03 $3D $00 $57
+			  romContents = new int[] {	//Test
+				0b00100000_00000100,	//LD A, $04
+				0b00100001_00001001,	//LD B, $09
+				0b00100010_00001100,	//LD C, $0C
+				0b00100011_00010001,	//LD D, $11
+				0b11100001_00000000,	//INT A
+				0b11100001_00000001,	//INT B
+				0b11100001_00000010,	//INT C
+				0b11100001_00000011,	//INT D
 		};
 		
 		TestUtil.insert(romContents, rom);

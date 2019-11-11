@@ -1,5 +1,12 @@
 package mechafinch.sim.e8;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.util.ArrayDeque;
 
 /**
@@ -24,6 +31,9 @@ public class E8Simulator {
 	private int instructionPointer;	//The instruction pointer
 	private boolean cFlag = false;	//The carry flag
 	
+	private BufferedReader inputStream;		//Inputstream used by interrupts
+	private BufferedWriter outputStream;	//Outputstream used by interrupts
+	
 	/*
 	 * Public Constructors
 	 */
@@ -37,8 +47,10 @@ public class E8Simulator {
 	 * @param nRegisters Initial register states
 	 * @param nInstructionPointer Initial IP
 	 * @param nInstruction Initial loaded instruction
+	 * @param nInputStream The input stream used by interrupts
+	 * @param nOutputStream The output stream used by interrupts
 	 */
-	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, ArrayDeque<Integer> nDataStack, ArrayDeque<Integer> nCallStack, int nInstructionPointer, String nInstruction, boolean nCFlag) {
+	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, ArrayDeque<Integer> nDataStack, ArrayDeque<Integer> nCallStack, int nInstructionPointer, String nInstruction, boolean nCFlag, InputStream nInputStream, PrintStream nOutputStream) {
 		//Sanitize inputs
 		if(nRAM.length != 256) throw new IllegalArgumentException("RAM size must be 256 bytes");
 		if(nROM.length != 1024) throw new IllegalArgumentException("ROM size must be 1024x2 bytes");
@@ -54,8 +66,23 @@ public class E8Simulator {
 		dataStack = nDataStack;
 		instructionPointer = nInstructionPointer;
 		cFlag = nCFlag;
+		inputStream = new BufferedReader(new InputStreamReader(nInputStream));
+		outputStream = new BufferedWriter(new OutputStreamWriter(nOutputStream));
 		
 		updateInstruction();
+	}
+	
+	/**
+	 * RAM & ROM Constructor with streams <br>
+	 * Constructs a new simulator instance with the given RAM, ROM, and streams
+	 * 
+	 * @param nRam Initial RAM state
+	 * @param nRom ROM
+	 * @param nInputStream Input stream for interrupts
+	 * @param nOutputStream Output stream for interrupts
+	 */
+	public E8Simulator(int[] nRAM, int[] nROM, InputStream nInputStream, PrintStream nOutputStream) {
+		this(nRAM, nROM, new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, nInputStream, nOutputStream);
 	}
 	
 	/**
@@ -66,7 +93,19 @@ public class E8Simulator {
 	 * @param nROM ROM
 	 */
 	public E8Simulator(int[] nRAM, int[] nROM) {
-		this(nRAM, nROM, new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false);
+		this(nRAM, nROM, new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
+	}
+	
+	/**
+	 * ROM & Streams Constructor <br>
+	 * Constructs a new simulator instance with the given ROM, empty RAM, and the given streams
+	 * 
+	 * @param nROM ROM
+	 * @param nInputStream Input stream for interrupts
+	 * @param nOutputStream Output stream for interrupts
+	 */
+	public E8Simulator(int[] nROM, InputStream nInputStream, PrintStream nOutputStream) {
+		this(new int[256], nROM, nInputStream, nOutputStream);
 	}
 	
 	/**
@@ -93,10 +132,12 @@ public class E8Simulator {
 	
 	/**
 	 * Steps through the simulation
+	 * This is the big boi method that does the work of each instruction
 	 * 
 	 * @return true if no exceptions occurred
+	 * @throws IOException 
 	 */
-	public boolean step() {
+	public boolean step() throws IOException {
 		//Flags for later
 		boolean incIP = true;	//Do we need to increment the instruction pointer
 		
@@ -178,6 +219,18 @@ public class E8Simulator {
 				registers[dReg] = res & 0xFF;
 				break;
 			
+			case INT:
+				String iCode = "";	//interrupt code
+				
+				if(instruction.charAt(7) == '0') {	//immediate
+					iCode = instruction.substring(8);
+				} else {
+					iCode = E8Util.paddedBinaryString(registers[E8Util.getRegister(instruction, 14)]);
+				}
+				
+				interrupt(iCode);
+				break;
+				
 			default: //NOP
 		}
 		
@@ -186,6 +239,44 @@ public class E8Simulator {
 		updateInstruction();
 		
 		return true;
+	}
+	
+	/**
+	 * Interrupt execution
+	 * This will interact with whatever is running the simulator
+	 * 
+	 * @param code The interrupt code
+	 * @throws IOException 
+	 */
+	private void interrupt(String code) throws IOException {
+		int register = E8Util.getRegister(code, 6);	//we'll probably need this
+		
+		//Code is 6 most significant bits, register is 2 least significant bits
+		switch(code.substring(0, 6)) {
+			case "000000":	//HALT
+				//TODO: Figure out how we tell it to stop
+				break;
+				
+			case "000001":	//Input character to register
+				registers[register] = (char) inputStream.read();
+				break;
+				
+			case "000010":	//Input integer to register
+				registers[register] = Integer.parseInt(inputStream.readLine());
+				break;
+				
+			case "000011":	//Output character from register
+				outputStream.write((char) registers[register]);
+				outputStream.flush();
+				break;
+				
+			case "000100":	//Output integer from register
+				outputStream.write(Integer.toString(registers[register]));
+				outputStream.flush();
+				break;
+				
+			default:	//Unknown interrupt = NOP
+		}
 	}
 	
 	/**
@@ -371,7 +462,7 @@ public class E8Simulator {
 	 * Local Blank Constructor
 	 */
 	protected E8Simulator() {
-		this(new int[256], new int[1024], new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false);
+		this(new int[256], new int[1024], new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
 	}
 	
 	protected void setRam(int[] newRam) { RAM = newRam; }
