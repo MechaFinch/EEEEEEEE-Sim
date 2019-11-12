@@ -199,8 +199,8 @@ public class E8Simulator {
 				break;
 				
 			case SUB:
-				sReg = Integer.parseInt(instruction.substring(10, 12), 2);	//Reg A @ 4-5
-				dReg = Integer.parseInt(instruction.substring(8, 10), 2);	//Dest @ 6-7
+				sReg = E8Util.getRegister(instruction, 10);	//Reg A @ 4-5
+				dReg = E8Util.getRegister(instruction, 8);	//Dest @ 6-7
 				int bVal = 0;
 				
 				//Get B
@@ -218,7 +218,40 @@ public class E8Simulator {
 				res = registers[sReg] - bVal;
 				registers[dReg] = res & 0xFF;
 				break;
+				
+			case AND:
+				sReg = E8Util.getRegister(instruction, 10);	//Reg A @ 4-5
+				dReg = E8Util.getRegister(instruction, 8);	//Dest @ 6-7
+				bVal = 0;
+				
+				if(instruction.charAt(7) == '0') {	//B is a register
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {							//B is an immediate
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				//Apply operation, complement, and limit to 8 bits in a nice little bitwise mess
+				registers[dReg] = ((registers[sReg] & bVal) ^ (instruction.charAt(6) == '0' ? 0x00 : 0xFF)) & 0xFF;
+				break;
+				
+			case OR:
+				sReg = E8Util.getRegister(instruction, 10);	//Reg A @ 4-5 (I could just have this later, but, ya know, conventions)
+				dReg = E8Util.getRegister(instruction, 8);	//Dest @ 6-7  (also because of how variables work i can't just pipe this to a method)
+				bVal = 0;
+				
+				if(instruction.charAt(7) == '0') {	//B is a register
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {							//B is an immediate
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				//Do basically everything lmao   op v       v complement                     keep to 8 bits v
+				registers[dReg] = ((registers[sReg] | bVal) ^ (instruction.charAt(6) == '0' ? 0x00 : 0xFF)) & 0xFF;
+				break;
 			
+			/*
+			 * E Type Instructions
+			 */
 			case INT:
 				String iCode = "";	//interrupt code
 				
