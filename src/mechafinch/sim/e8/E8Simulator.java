@@ -259,7 +259,7 @@ public class E8Simulator {
 					res += Integer.parseInt(instruction.substring(12), 2);
 				}
 				 
-				cFlag = res > MAX_VALUE;		//Set carry flag
+				cFlag = res > MAX_VALUE;			//Set carry flag
 				registers[dReg] = res & MAX_VALUE;	//Set destination to lower 8 bits
 				break;
 				
@@ -312,6 +312,21 @@ public class E8Simulator {
 				
 				//Do basically everything lmao   op v       v complement                               keep to N bits v
 				registers[dReg] = ((registers[sReg] | bVal) ^ (instruction.charAt(6) == '0' ? ZERO_MASK : MAX_VALUE)) & MAX_VALUE;
+				break;
+				
+			case XOR:
+				sReg = E8Util.getRegister(instruction, 10);	//Standard A type locations
+				dReg = E8Util.getRegister(instruction, 8);
+				bVal = 0;
+				
+				if(instruction.charAt(7) == '0') {	//B is a register
+					bVal = registers[E8Util.getRegister(instruction,  14)];
+				} else {							//Immediate
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				//Apply operation and sanitize output
+				registers[dReg] = ((registers[sReg] ^ bVal) ^ (instruction.charAt(6) == '0' ? ZERO_MASK : MAX_VALUE)) & MAX_VALUE;
 				break;
 			
 			/*
