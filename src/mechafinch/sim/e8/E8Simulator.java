@@ -34,6 +34,11 @@ public class E8Simulator {
 	private BufferedReader inputStream;		//Inputstream used by interrupts
 	private BufferedWriter outputStream;	//Outputstream used by interrupts
 	
+	private int MAX_VALUE,		//Maximum value based on number of bits
+				CARRY_MASK,		//Bitmask for detecting carry during addition
+				ZERO_MASK,		//Bitmask for not complementing during XOR
+				ADDRESS_MASK;	//Bitmask for the maximum value of a ROM address
+	
 	/*
 	 * Public Constructors
 	 */
@@ -45,15 +50,27 @@ public class E8Simulator {
 	 * @param nRAM Initial RAM state
 	 * @param nROM ROM
 	 * @param nRegisters Initial register states
+	 * @param dataLength Data length in bits
+	 * @param nDataStack Initial data stack
+	 * @param nCallStack Initial call stack
 	 * @param nInstructionPointer Initial IP
 	 * @param nInstruction Initial loaded instruction
 	 * @param nInputStream The input stream used by interrupts
 	 * @param nOutputStream The output stream used by interrupts
 	 */
-	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, ArrayDeque<Integer> nDataStack, ArrayDeque<Integer> nCallStack, int nInstructionPointer, String nInstruction, boolean nCFlag, InputStream nInputStream, PrintStream nOutputStream) {
+	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, int dataLength, ArrayDeque<Integer> nDataStack, ArrayDeque<Integer> nCallStack, int nInstructionPointer, String nInstruction, boolean nCFlag, InputStream nInputStream, PrintStream nOutputStream) {
+		//Data size stuff
+		MAX_VALUE = (int)(Math.pow(2, dataLength)) - 1;	//dataLength bits, all 1s
+		CARRY_MASK = MAX_VALUE << 1;					//A 1 one bit left, 0xFF -> 0x1xx where xs don't matter
+		ZERO_MASK = 0;
+		ADDRESS_MASK = 0x3FF;
+		
+		//System.out.println(Integer.toHexString(MAX_VALUE));
+		//System.out.println(Integer.toHexString(CARRY_MASK));
+		
 		//Sanitize inputs
-		if(nRAM.length != 256) throw new IllegalArgumentException("RAM size must be 256 bytes");
-		if(nROM.length != 1024) throw new IllegalArgumentException("ROM size must be 1024x2 bytes");
+		if(nRAM.length != (MAX_VALUE + 1)) throw new IllegalArgumentException("RAM size must be " + (MAX_VALUE + 1) + " data words");
+		if(nROM.length != 1024) throw new IllegalArgumentException("ROM size must be 1024 short instructions");
 		if(nRegisters.length != 4) throw new IllegalArgumentException("Register size must be 4 bytes");
 		if(nInstructionPointer > 0x3FF || nInstructionPointer < 0) throw new IllegalArgumentException("Instruction pointer must be a 10-bit unsigned value");
 		if(nInstruction.length() != 16 || !nInstruction.matches("[10]+")) throw new IllegalArgumentException("Instruction must be a 16-bit binary string");
@@ -73,6 +90,20 @@ public class E8Simulator {
 	}
 	
 	/**
+	 * RAM & ROM Constructor with streams and data length <br>
+	 * Constructs a new simulator instance with the given RAM, ROM, streams, and data length
+	 * 
+	 * @param nRAM Initial RAM state
+	 * @param nROM ROM
+	 * @param dataLength Length of data words in bits
+	 * @param nInputStream Input stream for interrupts
+	 * @param nOutputStream Output stream for interrupts
+	 */
+	public E8Simulator(int[] nRAM, int[] nROM, int dataLength, InputStream nInputStream, PrintStream nOutputStream) {
+		this(nRAM, nROM, new int[4], dataLength, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, nInputStream, nOutputStream);
+	}
+	
+	/**
 	 * RAM & ROM Constructor with streams <br>
 	 * Constructs a new simulator instance with the given RAM, ROM, and streams
 	 * 
@@ -82,7 +113,19 @@ public class E8Simulator {
 	 * @param nOutputStream Output stream for interrupts
 	 */
 	public E8Simulator(int[] nRAM, int[] nROM, InputStream nInputStream, PrintStream nOutputStream) {
-		this(nRAM, nROM, new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, nInputStream, nOutputStream);
+		this(nRAM, nROM, new int[4], 8, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, nInputStream, nOutputStream);
+	}
+	
+	/**
+	 * RAM & ROM Constructor with data length <br>
+	 * Constructs a new simulator instance with the given RAM, ROM, and data length
+	 * 
+	 * @param nRAM Initial RAM state
+	 * @param nROM ROM
+	 * @param dataLength Data length in bits
+	 */
+	public E8Simulator(int[] nRAM, int[] nROM, int dataLength) {
+		this(nRAM, nROM, new int[4], dataLength, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
 	}
 	
 	/**
@@ -93,7 +136,20 @@ public class E8Simulator {
 	 * @param nROM ROM
 	 */
 	public E8Simulator(int[] nRAM, int[] nROM) {
-		this(nRAM, nROM, new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
+		this(nRAM, nROM, new int[4], 8, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
+	}
+	
+	/**
+	 * ROM, streams, and data length constructor <br>
+	 * Constructs a new simulator instance with the given ROM, empty RAM, and the given data length and streams
+	 * 
+	 * @param nROM ROM
+	 * @param dataLength Data length in bits
+	 * @param nInputStream Input stream for interrupts
+	 * @param nOutputStream Output stream for interrupts
+	 */
+	public E8Simulator(int[] nROM, int dataLength, InputStream nInputStream, PrintStream nOutputStream) {
+		this(new int[256], nROM, dataLength, nInputStream, nOutputStream);
 	}
 	
 	/**
@@ -106,6 +162,17 @@ public class E8Simulator {
 	 */
 	public E8Simulator(int[] nROM, InputStream nInputStream, PrintStream nOutputStream) {
 		this(new int[256], nROM, nInputStream, nOutputStream);
+	}
+	
+	/**
+	 * ROM and data length constructor <br>
+	 * Constructs a new simulator instance with the given ROM, empty RAM, and the given data length
+	 * 
+	 * @param nROM ROM
+	 * @param dataLength Data length in bits
+	 */
+	public E8Simulator(int[] nROM, int dataLength) {
+		this(new int[256], nROM, dataLength);
 	}
 	
 	/**
@@ -194,8 +261,8 @@ public class E8Simulator {
 					res += Integer.parseInt(instruction.substring(12), 2);
 				}
 				 
-				cFlag = (res & 0x1FF) > 255;	//Set carry flag
-				registers[dReg] = res & 0xFF;	//Set destination to lower 8 bits
+				cFlag = (res & CARRY_MASK) > MAX_VALUE;	//Set carry flag
+				registers[dReg] = res & MAX_VALUE;		//Set destination to lower 8 bits
 				break;
 				
 			case SUB:
@@ -216,7 +283,7 @@ public class E8Simulator {
 				
 				//Apply & fix
 				res = registers[sReg] - bVal;
-				registers[dReg] = res & 0xFF;
+				registers[dReg] = res & MAX_VALUE;
 				break;
 				
 			case AND:
@@ -230,8 +297,8 @@ public class E8Simulator {
 					bVal = Integer.parseInt(instruction.substring(12), 2);
 				}
 				
-				//Apply operation, complement, and limit to 8 bits in a nice little bitwise mess
-				registers[dReg] = ((registers[sReg] & bVal) ^ (instruction.charAt(6) == '0' ? 0x00 : 0xFF)) & 0xFF;
+				//Apply operation, complement, and limit to however many bits in a nice little bitwise mess
+				registers[dReg] = ((registers[sReg] & bVal) ^ (instruction.charAt(6) == '0' ? ZERO_MASK : MAX_VALUE)) & MAX_VALUE;
 				break;
 				
 			case OR:
@@ -245,8 +312,8 @@ public class E8Simulator {
 					bVal = Integer.parseInt(instruction.substring(12), 2);
 				}
 				
-				//Do basically everything lmao   op v       v complement                     keep to 8 bits v
-				registers[dReg] = ((registers[sReg] | bVal) ^ (instruction.charAt(6) == '0' ? 0x00 : 0xFF)) & 0xFF;
+				//Do basically everything lmao   op v       v complement                               keep to N bits v
+				registers[dReg] = ((registers[sReg] | bVal) ^ (instruction.charAt(6) == '0' ? ZERO_MASK : MAX_VALUE)) & MAX_VALUE;
 				break;
 			
 			/*
@@ -268,7 +335,7 @@ public class E8Simulator {
 		}
 		
 		//Load next instruction
-		if(incIP) instructionPointer++;
+		if(incIP) instructionPointer = (instructionPointer + 1) & ADDRESS_MASK;
 		updateInstruction();
 		
 		return true;
@@ -291,11 +358,11 @@ public class E8Simulator {
 				break;
 				
 			case "000001":	//Input character to register
-				registers[register] = (char) inputStream.read();
+				registers[register] = (char) inputStream.read() & MAX_VALUE;
 				break;
 				
 			case "000010":	//Input integer to register
-				registers[register] = Integer.parseInt(inputStream.readLine());
+				registers[register] = Integer.parseInt(inputStream.readLine()) & MAX_VALUE;
 				break;
 				
 			case "000011":	//Output character from register
@@ -316,7 +383,7 @@ public class E8Simulator {
 	 * Reset the simulator
 	 */
 	public void reset() {
-		RAM = new int[256];
+		RAM = new int[MAX_VALUE + 1];
 		registers = new int[4];
 		instructionPointer = 0;
 		cFlag = false;
@@ -495,7 +562,7 @@ public class E8Simulator {
 	 * Local Blank Constructor
 	 */
 	protected E8Simulator() {
-		this(new int[256], new int[1024], new int[4], new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
+		this(new int[256], new int[1024], new int[4], 8, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0, "0000000000000000", false, System.in, System.out);
 	}
 	
 	protected void setRam(int[] newRam) { RAM = newRam; }
