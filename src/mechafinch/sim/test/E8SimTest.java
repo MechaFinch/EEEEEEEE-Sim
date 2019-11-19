@@ -13,10 +13,10 @@ public class E8SimTest {
 	public static void main(String[] args) throws IOException {
 		int[] rom = new int[1024],
 			  romContents = new int[] {	//Test
-				0b00100000_10001111,	//LD A, 0b10001111
-				0b00100001_11110001,	//LD B, 0b11110001
-				0b01010010_10000001,	//XNOR C, A, B
-				0b01010011_11001111,	//XNOR D, A, $F
+				0b00100000_10001111,	//LD A, $8F
+				0b00100001_00000011,	//LD B, $03
+				0b01011010_10000001,	//SRA C, A, B
+				0b01011011_11000101,	//SRA D, A, $5
 		};
 		
 		TestUtil.insert(romContents, rom);

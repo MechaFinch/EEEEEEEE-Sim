@@ -28,7 +28,8 @@ public class E8Simulator {
 	
 	private String instruction;		//Current instruction (binary string)
 	private Instructions iType;		//The type of the current instruction
-	private int instructionPointer;	//The instruction pointer
+	private int instructionPointer,	//The instruction pointer
+				dataLength;			//Length of data words
 	private boolean cFlag = false;	//The carry flag
 	
 	private BufferedReader inputStream;		//Inputstream used by interrupts
@@ -83,6 +84,9 @@ public class E8Simulator {
 		cFlag = nCFlag;
 		inputStream = new BufferedReader(new InputStreamReader(nInputStream));
 		outputStream = new BufferedWriter(new OutputStreamWriter(nOutputStream));
+		
+		//Didn't use separate name oof
+		this.dataLength = dataLength;
 		
 		updateInstruction();
 	}
@@ -327,6 +331,49 @@ public class E8Simulator {
 				
 				//Apply operation and sanitize output
 				registers[dReg] = ((registers[sReg] ^ bVal) ^ (instruction.charAt(6) == '0' ? ZERO_MASK : MAX_VALUE)) & MAX_VALUE;
+				break;
+				
+			case NOT:
+				sReg = E8Util.getRegister(instruction, 10);	//Standard locations, no B
+				dReg = E8Util.getRegister(instruction, 8);
+				
+				//Apply & sanitize
+				registers[dReg] = (registers[sReg] ^ MAX_VALUE) & MAX_VALUE;
+				break;
+				
+			case BSL:
+				sReg = E8Util.getRegister(instruction, 10);	//Standard A type
+				dReg = E8Util.getRegister(instruction, 8);
+				bVal = 0;
+				
+				if(instruction.charAt(7) == '0') {	//B is register
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {							//Immediate
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				//Apply shift & sanitize
+				registers[dReg] = (registers[sReg] << bVal) & MAX_VALUE;
+				break;
+				
+			case BSR:
+				sReg = E8Util.getRegister(instruction, 10);	//Standard A type
+				dReg = E8Util.getRegister(instruction, 8);
+				bVal = 0;
+				
+				if(instruction.charAt(7) == '0') {	//B is register
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {							//B is immediate
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				if(instruction.charAt(8) == '0') {	//Logical right shift
+					registers[dReg] = (registers[sReg] >>> bVal) & MAX_VALUE;
+				} else {							//Arithmetic right shift
+					//Sign of B
+					int tmp = registers[sReg];
+					//TODO: Figure out SRA
+				}
 				break;
 			
 			/*
