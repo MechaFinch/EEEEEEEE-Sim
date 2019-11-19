@@ -35,7 +35,6 @@ public class E8Simulator {
 	private BufferedWriter outputStream;	//Outputstream used by interrupts
 	
 	private int MAX_VALUE,		//Maximum value based on number of bits
-				CARRY_MASK,		//Bitmask for detecting carry during addition
 				ZERO_MASK,		//Bitmask for not complementing during XOR
 				ADDRESS_MASK;	//Bitmask for the maximum value of a ROM address
 	
@@ -61,7 +60,6 @@ public class E8Simulator {
 	public E8Simulator(int[] nRAM, int[] nROM, int[] nRegisters, int dataLength, ArrayDeque<Integer> nDataStack, ArrayDeque<Integer> nCallStack, int nInstructionPointer, String nInstruction, boolean nCFlag, InputStream nInputStream, PrintStream nOutputStream) {
 		//Data size stuff
 		MAX_VALUE = (int)(Math.pow(2, dataLength)) - 1;	//dataLength bits, all 1s
-		CARRY_MASK = MAX_VALUE << 1;					//A 1 one bit left, 0xFF -> 0x1xx where xs don't matter
 		ZERO_MASK = 0;
 		ADDRESS_MASK = 0x3FF;
 		
@@ -261,8 +259,8 @@ public class E8Simulator {
 					res += Integer.parseInt(instruction.substring(12), 2);
 				}
 				 
-				cFlag = (res & CARRY_MASK) > MAX_VALUE;	//Set carry flag
-				registers[dReg] = res & MAX_VALUE;		//Set destination to lower 8 bits
+				cFlag = res > MAX_VALUE;		//Set carry flag
+				registers[dReg] = res & MAX_VALUE;	//Set destination to lower 8 bits
 				break;
 				
 			case SUB:
