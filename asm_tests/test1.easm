@@ -1,0 +1,16 @@
+; hello world time
+
+#define cout_a 0x0C
+#define data 0
+
+DB data "Hello, World!", 0x0A, 0x00
+
+main:
+	LD B, data
+	main.loop:
+		LD A, [B]
+		BZ A, main.end	; zero terminated
+		INT cout_a
+		ADD B, B, 1
+	main.end:
+	INT 0
