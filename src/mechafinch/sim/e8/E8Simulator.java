@@ -370,9 +370,16 @@ public class E8Simulator {
 				if(instruction.charAt(8) == '0') {	//Logical right shift
 					registers[dReg] = (registers[sReg] >>> bVal) & MAX_VALUE;
 				} else {							//Arithmetic right shift
-					//Sign of B
-					int tmp = registers[sReg];
-					//TODO: Figure out SRA
+					//Isolate sign bit 0b1xx -> 0b100, 0b0xx -> 0b000
+					int val = registers[sReg],
+						signMask = (val >> (dataLength - 1)) << (dataLength - 1);
+					
+					//Each single shift, set sign bit each shift
+					while(bVal-- > 0) {
+						val = (val >>> 1) | signMask;
+					}
+					
+					registers[dReg] = val & MAX_VALUE; 
 				}
 				break;
 			

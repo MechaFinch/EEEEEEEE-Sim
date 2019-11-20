@@ -22,7 +22,7 @@ public class LocalTest {
 		System.out.println(Integer.toString(0xA8B2, 2));
 		System.out.println(Integer.toString(0xA8B2, 2).matches("[10]+"));
 		
-		E8Simulator e8 = new E8Simulator(RAM, ROM, regs, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0x3FF, Integer.toString(0xA8B2, 2), false, System.in, System.out);//new E8Simulator(RAM, ROM, regs, 0x3FF, Integer.toString(0xA8B2, 2));
+		E8Simulator e8 = new E8Simulator(RAM, ROM, regs, 8, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0x3FF, Integer.toString(0xA8B2, 2), false, System.in, System.out);//new E8Simulator(RAM, ROM, regs, 0x3FF, Integer.toString(0xA8B2, 2));
 		
 		System.out.println("Instruction: " + e8.getInstruction() +
 						 "\nInstruction Pointer: " + e8.getIP() +
