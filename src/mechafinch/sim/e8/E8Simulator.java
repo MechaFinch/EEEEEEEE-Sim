@@ -35,9 +35,10 @@ public class E8Simulator {
 	private BufferedReader inputStream;		//Inputstream used by interrupts
 	private BufferedWriter outputStream;	//Outputstream used by interrupts
 	
-	private int MAX_VALUE,		//Maximum value based on number of bits
-				ZERO_MASK,		//Bitmask for not complementing during XOR
-				ADDRESS_MASK;	//Bitmask for the maximum value of a ROM address
+	private int MAX_VALUE,			//Maximum value based on number of bits
+				ZERO_MASK,			//Bitmask for not complementing during XOR
+				ADDRESS_MASK,		//Bitmask for the maximum value of a ROM address
+				SIGNEXTEND_MASK;	//Bitmask for sign-extension to 32 bit
 	
 	/*
 	 * Public Constructors
@@ -63,6 +64,7 @@ public class E8Simulator {
 		MAX_VALUE = (int)(Math.pow(2, dataLength)) - 1;	//dataLength bits, all 1s
 		ZERO_MASK = 0;
 		ADDRESS_MASK = 0x3FF;
+		SIGNEXTEND_MASK = -1 ^ MAX_VALUE; //All 1s except for the data bits
 		
 		//System.out.println(Integer.toHexString(MAX_VALUE));
 		//System.out.println(Integer.toHexString(CARRY_MASK));
@@ -203,12 +205,13 @@ public class E8Simulator {
 	 * Steps through the simulation
 	 * This is the big boi method that does the work of each instruction
 	 * 
-	 * @return true if no exceptions occurred
+	 * @return true if execution should continue (false if halted or excepted)
 	 * @throws IOException 
 	 */
 	public boolean step() throws IOException {
 		//Flags for later
 		boolean incIP = true;	//Do we need to increment the instruction pointer
+		System.out.println(iType);
 		
 		//Execute instruction
 		switch(iType) {
@@ -383,6 +386,16 @@ public class E8Simulator {
 				}
 				break;
 			
+			case JMP_DIR:
+				instructionPointer = Integer.parseInt(instruction.substring(6), 2) & ADDRESS_MASK; // Nice and simple
+				incIP = false;
+				break;
+				
+			case JMP_IND:
+				instructionPointer = (Integer.parseInt(instruction.substring(8), 2) + signExtend(registers[E8Util.getRegister(instruction, 6)])) & ADDRESS_MASK;
+				incIP = false;
+				break;
+			
 			/*
 			 * E Type Instructions
 			 */
@@ -395,7 +408,7 @@ public class E8Simulator {
 					iCode = E8Util.paddedBinaryString(registers[E8Util.getRegister(instruction, 14)]);
 				}
 				
-				interrupt(iCode);
+				if(interrupt(iCode)) return false;
 				break;
 				
 			default: //NOP
@@ -413,16 +426,16 @@ public class E8Simulator {
 	 * This will interact with whatever is running the simulator
 	 * 
 	 * @param code The interrupt code
+	 * @return True if the interrupt was "halt"
 	 * @throws IOException 
 	 */
-	private void interrupt(String code) throws IOException {
+	private boolean interrupt(String code) throws IOException {
 		int register = E8Util.getRegister(code, 6);	//we'll probably need this
 		
 		//Code is 6 most significant bits, register is 2 least significant bits
 		switch(code.substring(0, 6)) {
 			case "000000":	//HALT
-				//TODO: Figure out how we tell it to stop
-				break;
+				return true;
 				
 			case "000001":	//Input character to register
 				registers[register] = (char) inputStream.read() & MAX_VALUE;
@@ -438,13 +451,28 @@ public class E8Simulator {
 				break;
 				
 			case "000100":	//Output integer from register
-				outputStream.write(Integer.toString(registers[register]));
+				outputStream.write(Integer.toString(signExtend(registers[register]))); // Sign extended to properly display negative values
 				outputStream.flush();
 				break;
 				
 			default:	//Unknown interrupt = NOP
 		}
+		
+		return false;
 	}
+	
+	/**
+	 * Sign-extend a value for use with different-sized data
+	 * This wasn't necessary before because arithmetic operations work with the same data length
+	 * 
+	 * @param val The value to extend
+	 * @return The sign-extended value
+	 */
+	private int signExtend(int val) {
+		if(((val >> (dataLength - 1)) & 1) == 1) return val | SIGNEXTEND_MASK;
+		return val;
+	}
+	
 	
 	/**
 	 * Reset the simulator
