@@ -386,6 +386,10 @@ public class E8Simulator {
 				}
 				break;
 			
+			/*
+			 * J-Type Instructions
+			 */
+			
 			case JMP_DIR:
 				instructionPointer = Integer.parseInt(instruction.substring(6), 2) & ADDRESS_MASK; // Nice and simple
 				incIP = false;
@@ -411,6 +415,20 @@ public class E8Simulator {
 			case RET:
 				instructionPointer = callStack.pop(); // nice and easy, restore return target
 				incIP = false;
+				break;
+			
+			/*
+			 * B-Type Instructions
+			 */
+			case BEQ:
+				int offset; // declare this somewhere at least
+				
+				// Test if equal
+				if(registers[E8Util.getRegister(instruction, 6)] == registers[E8Util.getRegister(instruction, 8)]) {
+					instructionPointer += Integer.parseInt(instruction.substring(10), 2) * (instruction.charAt(5) == '0' ? 1 : -1);
+					instructionPointer &= ADDRESS_MASK;
+					incIP = false;
+				}
 				break;
 			
 			/*

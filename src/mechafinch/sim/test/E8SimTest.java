@@ -13,13 +13,16 @@ public class E8SimTest {
 	public static void main(String[] args) throws IOException {
 		int[] rom = new int[1024],
 			  romContents = new int[] {	//Test
-				0b10100001_00101110, // PUSH 0x2E
-				0b00100000_00000100, // LD A, 0x04
-				0b10100000_00000000, // PUSH A
-				0b10100011_01000000, // PEEK B
-				0b10100010_10000000, // POP C
-				0b10100010_11000000, // POP D
+				0b00100000_01011100, // LD A, 0x5C
+				0b00100001_00100011, // LD B, 0x23
+				0b00100010_01011100, // LD C, 0x5C
+				0b10000000_01000100, // BEQ A, B, +0x04
+				0b10000000_10000101, // BEQ A, C, +0x05
+				0b01100000_00000111, // JMP 0x007
+				0b00100011_11111111, // LD D, 0xFF
 				0b11100000_00000000, // exit
+				0b0,
+				0b10000100_10000010, // BEQ A, C, -0x02
 		};
 		
 		TestUtil.insert(romContents, rom);
