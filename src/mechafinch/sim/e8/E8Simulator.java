@@ -396,6 +396,23 @@ public class E8Simulator {
 				incIP = false;
 				break;
 			
+			case JSR_DIR:
+				callStack.push((instructionPointer + 1) & ADDRESS_MASK); // push return address
+				instructionPointer = Integer.parseInt(instruction.substring(6), 2) & ADDRESS_MASK; // direct jump to target
+				incIP = false;
+				break;
+			
+			case JSR_IND:
+				callStack.push((instructionPointer + 1) & ADDRESS_MASK); // return addr, indirect jump
+				instructionPointer = (Integer.parseInt(instruction.substring(8), 2) + signExtend(registers[E8Util.getRegister(instruction, 6)])) & ADDRESS_MASK;
+				incIP = false;
+				break;
+				
+			case RET:
+				instructionPointer = callStack.pop(); // nice and easy, restore return target
+				incIP = false;
+				break;
+			
 			/*
 			 * E Type Instructions
 			 */
