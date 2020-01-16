@@ -416,6 +416,26 @@ public class E8Simulator {
 			/*
 			 * E Type Instructions
 			 */
+			case PUSH:
+				bVal = 0;
+				
+				if(instruction.charAt(7) == '0') {	// value is a register
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {							// value is immediate
+					bVal = Integer.parseInt(instruction.substring(8), 2);
+				}
+				
+				dataStack.push(bVal);
+				break;
+			
+			case POP:
+				registers[E8Util.getRegister(instruction, 8)] = dataStack.pop();
+				break;
+			
+			case PEEK:
+				registers[E8Util.getRegister(instruction, 8)] = dataStack.peek();
+				break;
+			
 			case INT:
 				String iCode = "";	//interrupt code
 				
