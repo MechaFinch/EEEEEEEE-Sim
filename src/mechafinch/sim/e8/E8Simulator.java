@@ -421,12 +421,31 @@ public class E8Simulator {
 			 * B-Type Instructions
 			 */
 			case BEQ:
-				int offset; // declare this somewhere at least
-				
 				// Test if equal
 				if(registers[E8Util.getRegister(instruction, 6)] == registers[E8Util.getRegister(instruction, 8)]) {
+					// Branch offset
 					instructionPointer += Integer.parseInt(instruction.substring(10), 2) * (instruction.charAt(5) == '0' ? 1 : -1);
-					instructionPointer &= ADDRESS_MASK;
+					instructionPointer &= ADDRESS_MASK; // keep in range
+					incIP = false;
+				}
+				break;
+				
+			case BLT:
+				// Test conditional
+				if(registers[E8Util.getRegister(instruction, 6)] < registers[E8Util.getRegister(instruction, 8)]) {
+					// Branch offset
+					instructionPointer += Integer.parseInt(instruction.substring(10), 2) * (instruction.charAt(5) == '0' ? 1 : -1);
+					instructionPointer &= ADDRESS_MASK; // keep in range
+					incIP = false;
+				}
+				break;
+				
+			case BGT:
+				// Test conditional
+				if(registers[E8Util.getRegister(instruction, 6)] > registers[E8Util.getRegister(instruction, 8)]) {
+					// Branch offset
+					instructionPointer += Integer.parseInt(instruction.substring(10), 2) * (instruction.charAt(5) == '0' ? 1 : -1);
+					instructionPointer &= ADDRESS_MASK; // keep in range
 					incIP = false;
 				}
 				break;
