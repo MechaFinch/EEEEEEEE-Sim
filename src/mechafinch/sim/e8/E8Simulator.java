@@ -449,6 +449,25 @@ public class E8Simulator {
 					incIP = false;
 				}
 				break;
+				
+			case BZ:
+				// Test conditional
+				if(registers[E8Util.getRegister(instruction, 8)] == 0) {
+					// Branch offset
+					instructionPointer += Integer.parseInt(instruction.substring(10), 2) * (instruction.charAt(5) == '0' ? 1 : -1);
+					instructionPointer &= ADDRESS_MASK;
+					incIP = false;
+				}
+				break;
+				
+			case BNZ:
+				// you know the drill
+				if(registers[E8Util.getRegister(instruction, 8)] != 0) {
+					instructionPointer += Integer.parseInt(instruction.substring(10), 2) * (instruction.charAt(5) == '0' ? 1 : -1);
+					instructionPointer &= ADDRESS_MASK;
+					incIP = false;
+				}
+				break;
 			
 			/*
 			 * E Type Instructions
