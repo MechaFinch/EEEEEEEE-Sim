@@ -1,0 +1,89 @@
+x = 43;
+
+for(i = 0; square(i) < x; i++) {
+	if(mod(x, i) == 0) {
+		println("not prime");
+		end;
+	}
+}
+
+println("prime");
+end;
+
+#define non_prime 2
+#define prime $non_prime + 2
+#define x 0
+#define i 1
+
+DB non_prime "Not prime.", 00
+DB prime "Prime!", 00
+
+; init
+LD A, 43
+ST A, [x]
+
+; loop
+LD A, 0
+ST A, [i]
+loop:
+	; check conditional
+	JSR func_square
+	LD B, [x]
+	BLT A, B, loop_start
+	JMP break
+	
+	loop_start:
+		LD A, [x]
+		LD B, [i]
+		JSR func_mod
+		BNZ A, loop_end
+		LD A, non_prime
+		JSR func_println
+		INT 0x00
+	
+	loop_end:
+	LD A, [i]
+	ADD A, A, 1
+	ST A, [i]
+	JMP loop
+
+break:
+LD A, prime
+JSR func_println
+INT 0x00
+
+func_mod: ; a,b consumed ret a
+	BLT A, B, func_mod_end ; if A < B, return
+	SUB A, A, B ; else subtract b from a
+	JMP func_mod
+	RET
+	
+func_square: ; a,b,c consumed ret a
+	LD B, A
+	LD C, A
+	LD A, 0
+	func_square_loop:
+		BZ C, func_square_end
+		SUB C, C, 1
+		ADD A, A, B
+		JMP func_square_loop
+	RET
+	
+func_println: ; a,b consumed ret none
+	LD B, [A]
+	BZ B, func_println_fin
+	INT 0x0D
+	ADD A, A, 1
+	JMP func_println
+	func_println_fin:
+		LD B, 0x0A
+		INT 0x0D
+		RET
+
+
+
+
+	
+	
+	
+	

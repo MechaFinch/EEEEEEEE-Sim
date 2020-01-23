@@ -12,5 +12,6 @@ main:
 		BZ A, main.end	; zero terminated
 		INT cout_a
 		ADD B, B, 1
+		JMP main.loop
 	main.end:
 	INT 0
