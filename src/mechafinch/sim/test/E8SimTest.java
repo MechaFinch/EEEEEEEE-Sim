@@ -3,7 +3,10 @@ package mechafinch.sim.test;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import mechafinch.asm.E8Assembler;
 import mechafinch.sim.e8.E8Simulator;
 
 /**
@@ -13,6 +16,21 @@ import mechafinch.sim.e8.E8Simulator;
  */
 public class E8SimTest {
 	public static void main(String[] args) throws IOException {
+		/*
+		 * Assemble
+		 */
+		BufferedReader br = new BufferedReader(new FileReader("asm_tests/is prime.txt"));
+		List<String> linesList = br.lines().collect(Collectors.toList());
+		br.close();
+		
+		String[] lines = linesList.toArray(new String[linesList.size()]);
+		//for(String s : lines) System.out.println(s);
+		
+		String[] assembled = E8Assembler.assembleToDualHex(lines);
+		
+		/*
+		 * Run
+		 */
 		int[] ram = new int[256],
 			  rom = new int[1024];
 		/*	  romContents = new int[] {	//Test
@@ -27,11 +45,16 @@ public class E8SimTest {
 		TestUtil.insert(romContents, rom);
 		*/
 		
+		/*
 		// Load from the f i l e
 		BufferedReader br = new BufferedReader(new FileReader("asm_tests/is prime simple.txt"));
 		String ramString = br.readLine(),
 			   romString = br.readLine();
 		br.close();
+		*/
+		
+		String ramString = assembled[0],
+			   romString = assembled[1];
 		
 		// Parse ram and rom
 		for(int i = 0; i < ramString.length(); i += 2) {
@@ -44,8 +67,8 @@ public class E8SimTest {
 		
 		E8Simulator testSim = new E8Simulator(ram, rom);
 		
-		//Execute order 66
-		while(testSim.step());
+		//Execute order 66 (at most 256x)
+		for(int i = 0; i < 256 && testSim.step(); i++);
 		
 		//Dump state, execute, dump again
 		//TestUtil.dumpState(testSim);

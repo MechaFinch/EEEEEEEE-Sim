@@ -1,3 +1,6 @@
+$08080A ; bit info header
+
+### multiline comment
 x = 43;
 
 for(i = 0; square(i) < x; i++) {
@@ -9,9 +12,10 @@ for(i = 0; square(i) < x; i++) {
 
 println("prime");
 end;
+###
 
 #define non_prime 2
-#define prime $non_prime + 2
+#define prime 13
 #define x 0
 #define i 1
 
