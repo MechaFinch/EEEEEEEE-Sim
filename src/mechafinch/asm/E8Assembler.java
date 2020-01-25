@@ -80,6 +80,7 @@ public class E8Assembler {
 	 */
 	private static String assemble(String[] source) {
 		String header = "08080A"; // default header
+		boolean foundHeader = false;
 		
 		ArrayList<String> rawLines = new ArrayList<>(); // Lines without comments
 		
@@ -106,15 +107,18 @@ public class E8Assembler {
 			if(line.contains(";")) line = line.substring(0, line.indexOf(';')).trim();
 			
 			// Add line if it has contents
-			if(!line.isEmpty()) rawLines.add(line.toLowerCase());
+			if(!line.isEmpty()) rawLines.add(line);
 		}
 		
-		// Find defines
+		/*
+		 * Find Definitions
+		 */
 		HashMap<String, String> definitions = new HashMap<>();
 		
 		for(int l = 0; l < rawLines.size(); l++) {
 			String line = rawLines.get(l);
 			
+			// Define found
 			if(line.startsWith("#define ")) {
 				line = line.substring(8);
 				
@@ -125,10 +129,12 @@ public class E8Assembler {
 				if(line.startsWith("\"")) { // Consume until quote
 					boolean escaped = false;
 					
+					// Loop over the line's chars
 					int i;
 					for(i = 1; i < line.length(); i++) {
 						char c = line.charAt(i);
 						
+						// Stop when we reach the closing quote, ignoring escaped chars
 						if(c == '"' && !escaped) break;
 						else if(c == '\\' && !escaped) escaped = true;
 						else {
@@ -137,6 +143,7 @@ public class E8Assembler {
 						}
 					}
 					
+					// Make sure the result exists
 					if(i == line.length()) throw new IllegalArgumentException("Invalid definition: #define " + line);
 					line = line.substring(i);
 				} else { // Consume until space
@@ -144,18 +151,148 @@ public class E8Assembler {
 					line = line.substring(line.indexOf(' ') + 1);
 				}
 				
+				// remove whitespace and quotes
 				v = line.trim();
 				
+				if(v.startsWith("\"")) v = v.substring(1, v.length() - 1);
+				
+				// Log and add the definition
 				System.out.println("Define \"" + k + "\" as \"" + v + "\"");
+				definitions.put(k, v);
 				rawLines.remove(l--);
+			} else if(line.startsWith("$")) { // Find header as well
+				header = line.substring(1);
+				rawLines.remove(l--);
+				foundHeader = true;
 			}
 		}
 		
-		System.out.println(rawLines);
+		// Record lines before definitions applied
+		System.out.println(rawLines + "\n");
+		
+		// If there isn't a header, apply its definition if available
+		if(!foundHeader) {
+			if(definitions.keySet().contains("header")) header = definitions.get("header");
+		}
+		
+		/*
+		 * Apply Definitions
+		 */
+		for(String term : definitions.keySet()) {
+			//System.out.println(term);
+			
+			// Go over each line replacing the term with the definition
+			for(int l = 0; l < rawLines.size(); l++) {
+				rawLines.set(l, rawLines.get(l).replace(term, definitions.get(term)));
+			}
+		}
+		
+		/*
+		 *  Find Labels
+		 */
+		HashMap<String, Integer> labels = new HashMap<>();
+		
+		for(int ln = 0; ln < rawLines.size(); ln++) {
+			String line = rawLines.get(ln);
+			
+			if(line.contains(":")) { // Found a label
+				labels.put(line.substring(0, line.indexOf(':')), ln);
+				
+				if(line.substring(line.indexOf(':') + 1).equals("")) { // Label on its own line
+					rawLines.remove(ln); // Label will point to the next instruction
+				} else { // inline label
+					rawLines.set(ln, line.substring(line.indexOf(':') + 1).trim());
+				}
+			}
+		}
+		
+		// List labels
+		for(String lbl : labels.keySet()) System.out.println(lbl + ": " + labels.get(lbl));
+		
+		/*
+		 * Interpret header because we need the values
+		 */
+		int dataBits = Integer.parseInt(header.substring(0, 2), 16),
+			ramAddrBits = Integer.parseInt(header.substring(2, 4), 16),
+			romAddrBits = Integer.parseInt(header.substring(4, 6), 16);
+		
+		/*
+		 * Interpret Lines
+		 */
+		ArrayList<ProgramSection> ramSections = new ArrayList<>(),
+								  romSections = new ArrayList<>(); // Rom can have multiple sections via ORG
+		                          
+		for(int ln = 0; ln < rawLines.size(); ln++) {
+			String line = rawLines.get(ln),
+				   lower = line.toLowerCase(),
+				   inst = "";
+			
+			// Switch over opcodes
+			if(lower.startsWith("DB")) { // Define Bytes
+				// Get start address
+				int addrStart = 2, addrEnd;
+				
+				// Walk until not whitespace, we've found the address
+				while(Character.isWhitespace(line.charAt(addrStart)) || line.charAt(addrStart) == ',') addrStart++;
+				// Walk until whitespace, we've finished the address
+				addrEnd = addrStart;
+				while(!(Character.isWhitespace(line.charAt(addrEnd)) || line.charAt(addrStart) == ',')) addrEnd++;
+				
+				// Try to interpret the address
+				int startingAddress = interpretInteger(line.substring(addrStart, addrEnd), ramAddrBits);
+				
+				
+				// Start a RAM section
+				ProgramSection sec = new ProgramSection(startingAddress, 0);
+				
+				// Add values
+				
+			}
+		}
+		
+		// Header stuff again
+		int dataLength = 2 * (int) Math.ceil((double) dataBits / 8),
+			ramAddrLength = 2 * (int) Math.ceil((double) ramAddrBits / 8),
+			romAddrLength = 2 * (int) Math.ceil((double) romAddrBits / 8);
+		
+		// Print sections
+		System.out.println("<< RAM SECTIONS >>");
+		ramSections.forEach(e -> System.out.println(e.toHexString(dataLength, ramAddrLength, romAddrLength)));
+		
+		
+		System.out.println(rawLines + "\n");
 		
 		return "08080A0000050F000102030401000400003047410544013447";
 	}
+	
+	/**
+	 * Attempts to interpret an integer literal
+	 * 
+	 * @param value The value to interpret
+	 * @param bits The number of hex characters it is represented with
+	 * @return The value of the literal
+	 */
+	private static int interpretInteger(String value, int bits) {
+		value = value.toLowerCase();
+		
+		// Determine max value
+		int maxValue = (int) (Math.pow(2, bits)) - 1;
+		
+		// Determine and use type (binary, decimal, hex)
+		int v = 0;
+		if(value.startsWith("0b")) { // binary
+			v = Integer.parseInt(value, 2);
+		} else if(value.startsWith("0x")) { // hex
+			v = Integer.parseInt(value, 16);
+		} else { // decimal
+			v = Integer.parseInt(value);
+		}
+		
+		if(v > maxValue) throw new NumberFormatException("Value (" + value + ") outside of range (0 to " + maxValue + ").");
+		return v;
+	}
 }
+
 
 
 

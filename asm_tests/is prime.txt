@@ -14,31 +14,31 @@ println("prime");
 end;
 ###
 
-#define non_prime 2
-#define prime 13
-#define x 0
-#define i 1
+#define var_non_prime 2
+#define var_prime 13
+#define var_x 0
+#define var_i 1
 
-DB non_prime "Not prime.", 00
-DB prime "Prime!", 00
+DB var_non_prime "Not prime.", 00
+DB var_prime "Prime!", 00
 
 ; init
 LD A, 43
-ST A, [x]
+ST A, [var_x]
 
 ; loop
 LD A, 0
-ST A, [i]
+ST A, [var_i]
 loop:
 	; check conditional
 	JSR func_square
-	LD B, [x]
+	LD B, [var_x]
 	BLT A, B, loop_start
 	JMP break
 	
 	loop_start:
-		LD A, [x]
-		LD B, [i]
+		LD A, [var_x]
+		LD B, [var_i]
 		JSR func_mod
 		BNZ A, loop_end
 		LD A, non_prime
@@ -46,9 +46,9 @@ loop:
 		INT 0x00
 	
 	loop_end:
-	LD A, [i]
+	LD A, [var_i]
 	ADD A, A, 1
-	ST A, [i]
+	ST A, [var_i]
 	JMP loop
 
 break:
