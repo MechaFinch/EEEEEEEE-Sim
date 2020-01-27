@@ -208,6 +208,7 @@ public class E8Assembler {
 		
 		// List labels
 		for(String lbl : labels.keySet()) System.out.println(lbl + ": " + labels.get(lbl));
+		System.out.println();
 		
 		/*
 		 * Interpret header because we need the values
@@ -223,31 +224,75 @@ public class E8Assembler {
 								  romSections = new ArrayList<>(); // Rom can have multiple sections via ORG
 		                          
 		for(int ln = 0; ln < rawLines.size(); ln++) {
-			String line = rawLines.get(ln),
-				   lower = line.toLowerCase(),
-				   inst = "";
+			String line = rawLines.get(ln),		// The raw line
+				   upper = line.toUpperCase(),	// The uppercase line
+				   inst = "";					// The assembled instruction
 			
 			// Switch over opcodes
-			if(lower.startsWith("DB")) { // Define Bytes
+			if(upper.startsWith("DB")) { // Define Bytes
 				// Get start address
-				int addrStart = 2, addrEnd;
+				int startIndex = 2, endIndex;
 				
 				// Walk until not whitespace, we've found the address
-				while(Character.isWhitespace(line.charAt(addrStart)) || line.charAt(addrStart) == ',') addrStart++;
+				while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
 				// Walk until whitespace, we've finished the address
-				addrEnd = addrStart;
-				while(!(Character.isWhitespace(line.charAt(addrEnd)) || line.charAt(addrStart) == ',')) addrEnd++;
+				endIndex = startIndex;
+				while(!(isWhitespaceComma(line.charAt(endIndex)))) endIndex++;
 				
 				// Try to interpret the address
-				int startingAddress = interpretInteger(line.substring(addrStart, addrEnd), ramAddrBits);
+				int startingAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits);
 				
 				
 				// Start a RAM section
 				ProgramSection sec = new ProgramSection(startingAddress, 0);
 				
 				// Add values
+				for(startIndex = endIndex; startIndex < line.length(); startIndex = endIndex) { // Loop by starting from rightmost known whitespace/comma
+					// Increment until we find a literal
+					while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+					
+					// Determine and apply if the literal is a string or number
+					char startChar = line.charAt(startIndex);
+					if(startChar == '"') {						// String literal
+						endIndex = startIndex++ + 1;
+						
+						// Determine the end of the string
+						while(line.charAt(endIndex) != '"') endIndex++;
+						
+						// Interpret string literal and add as bytes
+						String strHex = interpretStringLiteral(line.substring(startIndex, endIndex));
+						sec.addData(strHex, 2);
+						endIndex++;
+						
+					} else if(startChar == '\'') {				// Character literal
+						// Make sure its a single character
+						if(line.charAt(startIndex + 2) != '\'') throw new IllegalArgumentException("Invalid character literal starting at " + line.substring(startIndex));
+						
+						// Interpret
+						sec.addData(toHex(line.charAt(startIndex + 1), 2), 2);
+						endIndex = startIndex + 2;
+						
+					} else if(Character.isDigit(startChar)) {	// Integer literal
+						// Find end of literal
+						endIndex = startIndex;
+						while(endIndex < line.length() && !isWhitespaceComma(line.charAt(endIndex))) endIndex++;
+						
+						// Interpret, words only
+						sec.addData(toHex(interpretInteger(line.substring(startIndex, endIndex), dataBits), 2), 2);
+						endIndex++;
+						
+					} else {									// oops something went wrong
+						throw new IllegalArgumentException("Invalid literal starting at " + line.substring(startIndex));
+					}
+				}
+				
+				// Add section
+				ramSections.add(sec);
 				
 			}
+			
+			// Print the instruction
+			System.out.println(String.format("%-16s", line) + " " + inst);
 		}
 		
 		// Header stuff again
@@ -256,20 +301,58 @@ public class E8Assembler {
 			romAddrLength = 2 * (int) Math.ceil((double) romAddrBits / 8);
 		
 		// Print sections
-		System.out.println("<< RAM SECTIONS >>");
-		ramSections.forEach(e -> System.out.println(e.toHexString(dataLength, ramAddrLength, romAddrLength)));
+		System.out.println("\n<< RAM SECTIONS >>");
+		ramSections.forEach(e -> System.out.println(e.toPrintedHexString(dataLength, ramAddrLength, romAddrLength)));
+		System.out.println("\n<< ROM SECTIONS >>");
+		romSections.forEach(e -> System.out.println(e.toPrintedHexString(dataLength, ramAddrLength, romAddrLength)));
 		
-		
-		System.out.println(rawLines + "\n");
+		System.out.println("\n\n" + rawLines + "\n");
 		
 		return "08080A0000050F000102030401000400003047410544013447";
+	}
+	
+	/**
+	 * Determines if a character is whitespace or a comma, or something else
+	 * 
+	 * @param c The character
+	 * @return True if the character is whitespace or a comma
+	 */
+	private static boolean isWhitespaceComma(char c) {
+		return Character.isWhitespace(c) || c == ',';
+	}
+	
+	/**
+	 * Converts a string literal to ASCII hexadecimal
+	 * 
+	 * @param literal
+	 * @return ASCII hex of the string
+	 */
+	private static String interpretStringLiteral(String literal) {
+		String s = "";
+		
+		for(int i = 0; i < literal.length(); i++) {
+			s += toHex(literal.charAt(i), 2);
+		}
+		
+		return s;
+	}
+	
+	/**
+	 * Converts an integer to its hexidecimal representation with the specified number of digits
+	 * 
+	 * @param val Value
+	 * @param len Length
+	 * @return The hexadecimal string value
+	 */
+	private static String toHex(int val, int len) {
+		return String.format("%" + len + "s", Integer.toHexString(val).toUpperCase()).replace(' ', '0');
 	}
 	
 	/**
 	 * Attempts to interpret an integer literal
 	 * 
 	 * @param value The value to interpret
-	 * @param bits The number of hex characters it is represented with
+	 * @param bits The number of bits it is represented with
 	 * @return The value of the literal
 	 */
 	private static int interpretInteger(String value, int bits) {
