@@ -82,90 +82,22 @@ public class E8Assembler {
 		String header = "08080A"; // default header
 		boolean foundHeader = false;
 		
-		ArrayList<String> rawLines = new ArrayList<>(); // Lines without comments
+		// Get the lines without comments
+		ArrayList<String> rawLines = removeComments(source);
 		
-		// Eliminate comments
-		boolean isMultiline = false;
-		
-		for(int i = 0; i < source.length; i++) {
-			String line = source[i].trim();
-			System.out.println(line);
-			
-			// Detect multiline comments
-			if(line.startsWith("###")) {
-				if(isMultiline) { // End a multiline comment and restart the line
-					isMultiline = false;
-					source[i--] = (line.equals("###") ? "" : line.substring(4).trim());
-					continue;
-				} else { // Start a multiline comment and discard the line
-					isMultiline = true;
-					continue;
-				}
-			} else if(isMultiline) continue;
-			
-			// Detect single line comments
-			if(line.contains(";")) line = line.substring(0, line.indexOf(';')).trim();
-			
-			// Add line if it has contents
-			if(!line.isEmpty()) rawLines.add(line);
-		}
-		
-		/*
-		 * Find Definitions
-		 */
-		HashMap<String, String> definitions = new HashMap<>();
-		
+		// Find the header if it exists
 		for(int l = 0; l < rawLines.size(); l++) {
-			String line = rawLines.get(l);
+			String s = rawLines.get(l);
 			
-			// Define found
-			if(line.startsWith("#define ")) {
-				line = line.substring(8);
-				
-				String k = "", v = "";
-				
-				// Quote separated or space separated
-				// Determine key
-				if(line.startsWith("\"")) { // Consume until quote
-					boolean escaped = false;
-					
-					// Loop over the line's chars
-					int i;
-					for(i = 1; i < line.length(); i++) {
-						char c = line.charAt(i);
-						
-						// Stop when we reach the closing quote, ignoring escaped chars
-						if(c == '"' && !escaped) break;
-						else if(c == '\\' && !escaped) escaped = true;
-						else {
-							k += c;
-							escaped = false;
-						}
-					}
-					
-					// Make sure the result exists
-					if(i == line.length()) throw new IllegalArgumentException("Invalid definition: #define " + line);
-					line = line.substring(i);
-				} else { // Consume until space
-					k = line.substring(0, line.indexOf(' '));
-					line = line.substring(line.indexOf(' ') + 1);
-				}
-				
-				// remove whitespace and quotes
-				v = line.trim();
-				
-				if(v.startsWith("\"")) v = v.substring(1, v.length() - 1);
-				
-				// Log and add the definition
-				System.out.println("Define \"" + k + "\" as \"" + v + "\"");
-				definitions.put(k, v);
-				rawLines.remove(l--);
-			} else if(line.startsWith("$")) { // Find header as well
-				header = line.substring(1);
-				rawLines.remove(l--);
+			if(s.startsWith("$")) {
+				header = s.substring(1);
 				foundHeader = true;
+				break;
 			}
 		}
+		
+		// Determine definitions
+		HashMap<String, String> definitions = parseDefines(rawLines);
 		
 		// Record lines before definitions applied
 		System.out.println(rawLines + "\n");
@@ -222,6 +154,8 @@ public class E8Assembler {
 		 */
 		ArrayList<ProgramSection> ramSections = new ArrayList<>(),
 								  romSections = new ArrayList<>(); // Rom can have multiple sections via ORG
+		
+		ProgramSection currentROMSection = new ProgramSection(0, 1);
 		                          
 		for(int ln = 0; ln < rawLines.size(); ln++) {
 			String line = rawLines.get(ln),		// The raw line
@@ -230,70 +164,18 @@ public class E8Assembler {
 			
 			// Switch over opcodes
 			if(upper.startsWith("DB")) { // Define Bytes
-				// Get start address
-				int startIndex = 2, endIndex;
-				
-				// Walk until not whitespace, we've found the address
-				while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
-				// Walk until whitespace, we've finished the address
-				endIndex = startIndex;
-				while(!(isWhitespaceComma(line.charAt(endIndex)))) endIndex++;
-				
-				// Try to interpret the address
-				int startingAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits);
-				
-				
-				// Start a RAM section
-				ProgramSection sec = new ProgramSection(startingAddress, 0);
-				
-				// Add values
-				for(startIndex = endIndex; startIndex < line.length(); startIndex = endIndex) { // Loop by starting from rightmost known whitespace/comma
-					// Increment until we find a literal
-					while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
-					
-					// Determine and apply if the literal is a string or number
-					char startChar = line.charAt(startIndex);
-					if(startChar == '"') {						// String literal
-						endIndex = startIndex++ + 1;
-						
-						// Determine the end of the string
-						while(line.charAt(endIndex) != '"') endIndex++;
-						
-						// Interpret string literal and add as bytes
-						String strHex = interpretStringLiteral(line.substring(startIndex, endIndex));
-						sec.addData(strHex, 2);
-						endIndex++;
-						
-					} else if(startChar == '\'') {				// Character literal
-						// Make sure its a single character
-						if(line.charAt(startIndex + 2) != '\'') throw new IllegalArgumentException("Invalid character literal starting at " + line.substring(startIndex));
-						
-						// Interpret
-						sec.addData(toHex(line.charAt(startIndex + 1), 2), 2);
-						endIndex = startIndex + 2;
-						
-					} else if(Character.isDigit(startChar)) {	// Integer literal
-						// Find end of literal
-						endIndex = startIndex;
-						while(endIndex < line.length() && !isWhitespaceComma(line.charAt(endIndex))) endIndex++;
-						
-						// Interpret, words only
-						sec.addData(toHex(interpretInteger(line.substring(startIndex, endIndex), dataBits), 2), 2);
-						endIndex++;
-						
-					} else {									// oops something went wrong
-						throw new IllegalArgumentException("Invalid literal starting at " + line.substring(startIndex));
-					}
-				}
-				
-				// Add section
-				ramSections.add(sec);
-				
+				assembleDB(line, dataBits, ramAddrBits, ramSections);
 			}
 			
 			// Print the instruction
 			System.out.println(String.format("%-16s", line) + " " + inst);
 		}
+		
+		/*
+		 * Debug Output, sort sections
+		 */
+		ramSections.sort((a, b) -> a.getStartAddress() - b.getStartAddress());
+		romSections.sort((a, b) -> a.getStartAddress() - b.getStartAddress());
 		
 		// Header stuff again
 		int dataLength = 2 * (int) Math.ceil((double) dataBits / 8),
@@ -308,7 +190,186 @@ public class E8Assembler {
 		
 		System.out.println("\n\n" + rawLines + "\n");
 		
+		/*
+		 * Convert to single string
+		 */
+		String finalString = header;
+		
+		// Add RAM sections
+		for(int i = 0; i < ramSections.size(); i++) finalString += ramSections.get(i).toHexString(dataLength, ramAddrLength, romAddrLength);
+		
+		// Add ROM sections
+		for(int i = 0; i < romSections.size(); i++) finalString += romSections.get(i).toHexString(dataLength, ramAddrLength, romAddrLength);
+		
+		// Return this test thing so we don't break the simulator
 		return "08080A0000050F000102030401000400003047410544013447";
+	}
+	
+	/**
+	 * Assembles a DB line
+	 * 
+	 * @param line
+	 * @param dataBits
+	 * @param ramAddrBits
+	 * @param ramSections
+	 */
+	private static void assembleDB(String line, int dataBits, int ramAddrBits, ArrayList<ProgramSection> ramSections) {
+		// Get start address
+		int startIndex = 2, endIndex;
+		
+		// Walk until not whitespace, we've found the address
+		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		// Walk until whitespace, we've finished the address
+		endIndex = startIndex;
+		while(!(isWhitespaceComma(line.charAt(endIndex)))) endIndex++;
+		
+		// Try to interpret the address
+		int startingAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits);
+		
+		
+		// Start a RAM section
+		ProgramSection sec = new ProgramSection(startingAddress, 0);
+		
+		// Add values
+		for(startIndex = endIndex; startIndex < line.length(); startIndex = endIndex) { // Loop by starting from rightmost known whitespace/comma
+			// Increment until we find a literal
+			while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+			
+			// Determine and apply if the literal is a string or number
+			char startChar = line.charAt(startIndex);
+			if(startChar == '"') {						// String literal
+				endIndex = startIndex++ + 1;
+				
+				// Determine the end of the string
+				while(line.charAt(endIndex) != '"') endIndex++;
+				
+				// Interpret string literal and add as bytes
+				String strHex = interpretStringLiteral(line.substring(startIndex, endIndex));
+				sec.addData(strHex, 2);
+				endIndex++;
+				
+			} else if(startChar == '\'') {				// Character literal
+				// Make sure its a single character
+				if(line.charAt(startIndex + 2) != '\'') throw new IllegalArgumentException("Invalid character literal starting at " + line.substring(startIndex));
+				
+				// Interpret
+				sec.addData(toHex(line.charAt(startIndex + 1), 2), 2);
+				endIndex = startIndex + 2;
+				
+			} else if(Character.isDigit(startChar)) {	// Integer literal
+				// Find end of literal
+				endIndex = startIndex;
+				while(endIndex < line.length() && !isWhitespaceComma(line.charAt(endIndex))) endIndex++;
+				
+				// Interpret, words only
+				sec.addData(toHex(interpretInteger(line.substring(startIndex, endIndex), dataBits), 2), 2);
+				endIndex++;
+				
+			} else {									// oops something went wrong
+				throw new IllegalArgumentException("Invalid literal starting at " + line.substring(startIndex));
+			}
+		}
+		
+		// Add section
+		ramSections.add(sec);
+	}
+	
+	/**
+	 * Removes comments from the source strings
+	 * 
+	 * @param source
+	 * @return The arraylist of trimmed lines without comments
+	 */
+	private static ArrayList<String> removeComments(String[] source) {
+		ArrayList<String> rawLines = new ArrayList<>();
+		
+		boolean isMultiline = false;
+		for(int i = 0; i < source.length; i++) {
+			String line = source[i].trim();
+			System.out.println(line);
+			
+			// Detect multiline comments
+			if(line.startsWith("###")) {
+				if(isMultiline) { // End a multiline comment and restart the line
+					isMultiline = false;
+					source[i--] = (line.equals("###") ? "" : line.substring(4).trim());
+					continue;
+				} else { // Start a multiline comment and discard the line
+					isMultiline = true;
+					continue;
+				}
+			} else if(isMultiline) continue;
+			
+			// Detect single line comments
+			if(line.contains(";")) line = line.substring(0, line.indexOf(';')).trim();
+			
+			// Add line if it has contents
+			if(!line.isEmpty()) rawLines.add(line);
+		}
+		
+		return rawLines;
+	}
+	
+	/**
+	 * Finds #define definitions and parses them
+	 * 
+	 * @param rawLines
+	 * @param header
+	 * @return A HashMap with the term as the key and the definition as the value
+	 */
+	private static HashMap<String, String> parseDefines(ArrayList<String> rawLines) {
+		HashMap<String, String> definitions = new HashMap<>();
+		
+		// Loop over lines
+		for(int l = 0; l < rawLines.size(); l++) {
+			String line = rawLines.get(l);
+			
+			// Define found
+			if(line.startsWith("#define ")) {
+				line = line.substring(8);
+				
+				String k = "", v = "";
+				
+				// Quote separated or space separated
+				// Determine key
+				if(line.startsWith("\"")) { // Consume until quote
+					boolean escaped = false;
+					
+					// Loop over the line's chars
+					int i;
+					for(i = 1; i < line.length(); i++) {
+						char c = line.charAt(i);
+						
+						// Stop when we reach the closing quote, ignoring escaped chars
+						if(c == '"' && !escaped) break;
+						else if(c == '\\' && !escaped) escaped = true;
+						else {
+							k += c;
+							escaped = false;
+						}
+					}
+					
+					// Make sure the result exists
+					if(i == line.length()) throw new IllegalArgumentException("Invalid definition: #define " + line);
+					line = line.substring(i);
+				} else { // Consume until space
+					k = line.substring(0, line.indexOf(' '));
+					line = line.substring(line.indexOf(' ') + 1);
+				}
+				
+				// remove whitespace and quotes
+				v = line.trim();
+				
+				if(v.startsWith("\"")) v = v.substring(1, v.length() - 1);
+				
+				// Log and add the definition
+				System.out.println("Define \"" + k + "\" as \"" + v + "\"");
+				definitions.put(k, v);
+				rawLines.remove(l--);
+			}
+		}
+		
+		return definitions;
 	}
 	
 	/**

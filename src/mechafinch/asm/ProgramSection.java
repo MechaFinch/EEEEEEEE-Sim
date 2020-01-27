@@ -39,6 +39,13 @@ public class ProgramSection {
 	}
 	
 	/**
+	 * Gets the starting address
+	 * 
+	 * @return The start address
+	 */
+	public int getStartAddress() { return startAddress; }
+	
+	/**
 	 * Converts the section to its hexadecimal representation
 	 * 
 	 * @param dataLength Data length in characters
