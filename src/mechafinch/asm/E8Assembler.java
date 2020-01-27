@@ -166,7 +166,7 @@ public class E8Assembler {
 			if(upper.startsWith("DB")) {		// Define Bytes
 				assembleDB(line, dataBits, ramAddrBits, ramSections);
 			} else if(upper.startsWith("LD")) {	// Load
-				inst = assembleLD(line, dataBits, ramAddrBits, romAddrBits);
+				inst = assembleLD(line, dataBits, ramAddrBits);
 				currentROMSection.addData(inst, 4);
 			}
 			
@@ -220,7 +220,7 @@ public class E8Assembler {
 	 * @param romAddrBits
 	 * @return The assembled instruction
 	 */
-	private static String assembleLD(String line, int dataBits, int ramAddrBits, int romAddrBits) {
+	private static String assembleLD(String line, int dataBits, int ramAddrBits) {
 		// Determine destination register
 		int startIndex = 2, endIndex;
 		
@@ -243,9 +243,61 @@ public class E8Assembler {
 			instruction |= reg << 8;
 			instruction |= sReg << 6;
 		} else if(line.charAt(startIndex) == '[') {	// Indexed or indirect
+			// Find closing ], find next non-whitespace
+			while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
+			endIndex = ++startIndex;
+			while(line.charAt(endIndex) != ']') endIndex++;
 			
-		} else {									// Immediate
+			// Determine if the value is an address or offset
+			if(line.substring(startIndex, endIndex).contains("+") || isRegister(line.charAt(startIndex))) {	// register and/or offset
+				int sReg = -1, offset = 0;
+				
+				if(line.substring(startIndex, endIndex).contains("+")) { // register + offset
+					// might be register + offset or offset + register
+					if(isRegister(line.charAt(startIndex))) {
+						sReg = interpretRegister(line.charAt(startIndex));
+					} else {
+						offset = interpretInteger(line.substring(startIndex, line.indexOf('+')).trim(), 6);
+					}
+					
+					// Find second half
+					startIndex = line.indexOf('+') + 1;
+					while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
+					
+					// find the opposite one, throw exception if its a duplicate
+					if(isRegister(line.charAt(startIndex))) {
+						if(sReg != -1) throw new IllegalArgumentException("Cannot have two registers in indirect: " + line);
+						sReg = interpretRegister(line.charAt(startIndex));
+					} else {
+						if(sReg == -1) throw new IllegalArgumentException("Cannot have two offsets in indirect: " + line);
+						offset = interpretInteger(line.substring(startIndex, endIndex), 6);
+					}
+				} else {												 // just register
+					if(endIndex - startIndex != 1) throw new IllegalArgumentException("Invalid indirect: " + line);
+					sReg = interpretRegister(line.charAt(startIndex));
+				}
+				
+				// Create the instruction
+				instruction = 0b0111000_00000000;
+				instruction |= reg << 8;
+				instruction |= sReg << 6;
+				instruction |= offset & 0x3F; // keep it to 6 bits
+			} else { // immediate address, indexed
+				// nab the immediate, create the instruction
+				int offset = interpretInteger(line.substring(startIndex, line.length() - 1), 8);
+				
+				// slap together the instruction
+				instruction = 0b00110000_00000000;
+				instruction |= reg << 8;
+				instruction |= offset & 0xFF; // 8 bits
+			}
+		} else { // Immediate
+			int value = interpretInteger(line.substring(startIndex), 8);
 			
+			// its quick its easy and its free
+			instruction = 0b00100000_00000000;
+			instruction |= reg << 8;
+			instruction |= value & 0xFF;
 		}
 		
 		return Integer.toHexString(instruction).toUpperCase();
@@ -506,9 +558,9 @@ public class E8Assembler {
 		// Determine and use type (binary, decimal, hex)
 		int v = 0;
 		if(value.startsWith("0b")) { // binary
-			v = Integer.parseInt(value, 2);
+			v = Integer.parseInt(value.substring(2), 2);
 		} else if(value.startsWith("0x")) { // hex
-			v = Integer.parseInt(value, 16);
+			v = Integer.parseInt(value.substring(2), 16);
 		} else { // decimal
 			v = Integer.parseInt(value);
 		}
