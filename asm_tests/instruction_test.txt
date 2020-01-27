@@ -1,0 +1,36 @@
+###
+instructions test
+will have all the instructions owo
+###
+
+; M type
+LD A, 0x05	; load immediate hexadecimal	A=05	00100000_00000101	2005
+LD B, 17	; load immediate decimal	B=11	00100001_00010001	2111
+LD C, 0b1011	; load immediate binary		C=0B	00100010_00001011	220B
+LD D, 0x07	; 				D=07	00100011_00000111	2307
+
+LD A, B		; load register			A=11	00101000_01000000	2840
+
+ST D, [0x03]	; store indexed hexadecimal	003=07	00110111_00000011	3703
+LD B, [0x03]	; load indexed hexadecimal	B=07	00110001_00000011	3103
+
+ST B, [D]	; store indirect		007=07	00111101_11000000	3DC0
+ST C, [D + 0x01]; store indirect hexadecimal	008=0B	00111110_11000001	3EC1
+ST B, [D + 2]	; store indirect decimal	009=07	00111101_11000010	3DC2
+ST C, [D + 0b11]; store indirect binary		00A=0B	00111110_11000011	3EC3
+
+LD D, 0x10	;				D=10	00100011_00010000	2310
+ST B, [0x01 + D]; store indirect hexadecimal	011=07	00111101_11000001	3DC1
+ST C, [2 + D]	; store indirect decimal	012=0B	00111110_11000010	3EC2
+ST B, [0b11 + D]; store indirect binary		013=07	00111101_11000011	3DC3
+
+LD A, [D]	; load indirect			A=07	00111000_11000000	38C0
+
+LD A, [D + 0x03]; load indirect hexadecimal	A=07	00111000_11000011	38C3
+LD A, [0x03 + D];				A=07	00111000_11000011	38C3
+
+LD A, [D + 1]	; load indirect decimal		A=07	00111000_11000001	38C1
+LD A, [1 + D]	;				A=07	00111000_11000001	38C1
+
+LD A, [D + 0b10]; load indirect binary		A=07	00111000_11000010	38C2
+LD A, [0b10 + D];				A=07	00111000_11000010	38C2

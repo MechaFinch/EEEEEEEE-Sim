@@ -163,13 +163,19 @@ public class E8Assembler {
 				   inst = "";					// The assembled instruction
 			
 			// Switch over opcodes
-			if(upper.startsWith("DB")) { // Define Bytes
+			if(upper.startsWith("DB")) {		// Define Bytes
 				assembleDB(line, dataBits, ramAddrBits, ramSections);
+			} else if(upper.startsWith("LD")) {	// Load
+				inst = assembleLD(line, dataBits, ramAddrBits, romAddrBits);
+				currentROMSection.addData(inst, 4);
 			}
 			
 			// Print the instruction
 			System.out.println(String.format("%-16s", line) + " " + inst);
 		}
+		
+		// Add last rom section
+		romSections.add(currentROMSection);
 		
 		/*
 		 * Debug Output, sort sections
@@ -203,6 +209,46 @@ public class E8Assembler {
 		
 		// Return this test thing so we don't break the simulator
 		return "08080A0000050F000102030401000400003047410544013447";
+	}
+	
+	/**
+	 * Assembles a LD line
+	 * 
+	 * @param line
+	 * @param dataBits
+	 * @param ramAddrBits
+	 * @param romAddrBits
+	 * @return The assembled instruction
+	 */
+	private static String assembleLD(String line, int dataBits, int ramAddrBits, int romAddrBits) {
+		// Determine destination register
+		int startIndex = 2, endIndex;
+		
+		// First non-whitespace
+		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		
+		// We expect a register (also increment to next char
+		int reg = interpretRegister(line.charAt(startIndex++));
+		
+		// Continue until next non-whitespace
+		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		
+		int instruction = 0;
+		
+		// Determine immediate vs register vs indexed/indirect
+		if(isRegister(line.charAt(startIndex))) {	// Register
+			int sReg = interpretRegister(line.charAt(startIndex));
+			
+			instruction = 0b00101000_00000000; // load register template
+			instruction |= reg << 8;
+			instruction |= sReg << 6;
+		} else if(line.charAt(startIndex) == '[') {	// Indexed or indirect
+			
+		} else {									// Immediate
+			
+		}
+		
+		return Integer.toHexString(instruction).toUpperCase();
 	}
 	
 	/**
@@ -373,6 +419,41 @@ public class E8Assembler {
 	}
 	
 	/**
+	 * Determines the register (a=0, d=3) represented by the given character
+	 * 
+	 * @param c
+	 * @return The number of the register
+	 */
+	private static int interpretRegister(char c) {
+		switch(Character.toUpperCase(c)) {
+			case 'A':
+				return 0;
+			
+			case 'B':
+				return 1;
+				
+			case 'C':
+				return 2;
+				
+			case 'D':
+				return 3;
+		}
+		
+		throw new IllegalArgumentException("Invalid register: " + c);
+	}
+	
+	/**
+	 * Determines if the given character represents a register
+	 * 
+	 * @param c
+	 * @return True if C is A, B, C, or D
+	 */
+	private static boolean isRegister(char c) {
+		c = Character.toUpperCase(c);
+		return c == 'A' || c == 'B' || c == 'C' || c == 'D';
+	}
+	
+	/**
 	 * Determines if a character is whitespace or a comma, or something else
 	 * 
 	 * @param c The character
@@ -417,7 +498,7 @@ public class E8Assembler {
 	 * @return The value of the literal
 	 */
 	private static int interpretInteger(String value, int bits) {
-		value = value.toLowerCase();
+		value = value.toLowerCase().replace("_", ""); // Lowercase and remove underscores
 		
 		// Determine max value
 		int maxValue = (int) (Math.pow(2, bits)) - 1;
