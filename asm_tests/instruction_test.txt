@@ -33,6 +33,6 @@ LD A, [D + 1]	; load indirect decimal		A=07	00111000_11000001	38C1
 LD A, [1 + D]	;				A=07	00111000_11000001	38C1
 
 LD A, [D + 0b10]; load indirect binary		A=07	00111000_11000010	38C2
-LD A, [0b10 + D];				A=07	00111000_11000010	38C2
+LD A, [0b1000 + D];				A=00	00111000_11000010	38C8
 
 ; some wrong stuff to bulli it

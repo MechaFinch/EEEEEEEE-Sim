@@ -163,10 +163,13 @@ public class E8Assembler {
 				   inst = "";					// The assembled instruction
 			
 			// Switch over opcodes
-			if(upper.startsWith("DB")) {		// Define Bytes
+			if(upper.startsWith("DB")) {			// Define Bytes
 				assembleDB(line, dataBits, ramAddrBits, ramSections);
-			} else if(upper.startsWith("LD")) {	// Load
+			} else if(upper.startsWith("LD")) {		// Load
 				inst = assembleLD(line, dataBits, ramAddrBits);
+				currentROMSection.addData(inst, 4);
+			} else if(upper.startsWith("ST")) {		// Store
+				inst = assembleST(line, dataBits, ramAddrBits);
 				currentROMSection.addData(inst, 4);
 			}
 			
@@ -207,8 +210,92 @@ public class E8Assembler {
 		// Add ROM sections
 		for(int i = 0; i < romSections.size(); i++) finalString += romSections.get(i).toHexString(dataLength, ramAddrLength, romAddrLength);
 		
+		
+		return finalString;
+		
 		// Return this test thing so we don't break the simulator
-		return "08080A0000050F000102030401000400003047410544013447";
+		//return "08080A0000050F000102030401000400003047410544013447";
+	}
+	
+	/**
+	 * Assembles a ST line
+	 * 
+	 * @param line
+	 * @param dataBits
+	 * @param ramAddrBits
+	 * @return
+	 */
+	private static String assembleST(String line, int dataBits, int ramAddrBits) {
+		// General-use indicies
+		int startIndex = 2, endIndex;
+		
+		// Advance to first non-whitespace - expect source register
+		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		int reg = interpretRegister(line.charAt(startIndex++)); // get that register
+		
+		// Advance to next non-whitespace - expect destination address
+		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		
+		int instruction = 0;
+		
+		// Either indexed or indirect, make sure it is (find opening and closing brackets too)
+		if(line.charAt(startIndex++) != '[') throw new IllegalArgumentException("Destination must be indexed or indirect: " + line);
+		while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
+		endIndex = startIndex + 1;						// There should be at least one character before the closing bracket
+		while(line.charAt(endIndex) != ']') endIndex++;
+		
+		// Indexed vs indirect
+		if(line.substring(startIndex, endIndex).contains("+") || isRegister(line.charAt(startIndex))) { // Must be indirect
+			int sReg = -1, offset = 0; // These can be in either order
+			
+			if(line.substring(startIndex, endIndex).contains("+")) { // Has register & offset
+				// register & offset can be either order but there must be both
+				if(isRegister(line.charAt(startIndex))) {
+					sReg = interpretRegister(line.charAt(startIndex));
+				} else {
+					offset = interpretInteger(line.substring(startIndex, line.indexOf('+')).trim(), 6); // The index goes until the plus, 6 bits max
+				}
+				
+				// Find second part
+				startIndex = line.indexOf('+') + 1;
+				while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
+				
+				// This must be the opposite of the first
+				if(isRegister(line.charAt(startIndex))) {
+					if(sReg != -1) throw new IllegalArgumentException("Cannot have two registers in indirect: " + line);
+					sReg = interpretRegister(line.charAt(startIndex));
+				} else {
+					if(sReg == -1) throw new IllegalArgumentException("Cannot have two offsets in indirect: " + line);
+					offset = interpretInteger(line.substring(startIndex, endIndex), 6);
+				}
+			} else { // only has a register
+				// Make sure its just the register
+				endIndex = startIndex + 1;
+				char c;
+				while((c = line.charAt(endIndex)) != ']') {
+					// Anything that isn't whitespace its invalid
+					if(!Character.isWhitespace(c)) throw new IllegalArgumentException("Invalid indirect: " + line);
+					endIndex++;
+				}
+				
+				sReg = interpretRegister(line.charAt(startIndex));
+			}
+			
+			// Create the instruction, ORing in proper values
+			instruction = 0b00111100_00000000;
+			instruction |= reg << 8;
+			instruction |= sReg << 6;
+			instruction |= offset & 0x3F; // Keep it 6 bits, just in case?
+		} else {	// Must be indexed
+			int value = interpretInteger(line.substring(startIndex, endIndex), 8);
+			
+			// slapp the instruction
+			instruction = 0b00110100_00000000;
+			instruction |= reg << 8;
+			instruction |= value & 0xFF;
+		}
+		
+		return toHex(instruction, 4);
 	}
 	
 	/**
@@ -244,8 +331,9 @@ public class E8Assembler {
 			instruction |= sReg << 6;
 		} else if(line.charAt(startIndex) == '[') {	// Indexed or indirect
 			// Find closing ], find next non-whitespace
+			startIndex++;
 			while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
-			endIndex = ++startIndex;
+			endIndex = startIndex + 1;
 			while(line.charAt(endIndex) != ']') endIndex++;
 			
 			// Determine if the value is an address or offset
@@ -273,7 +361,15 @@ public class E8Assembler {
 						offset = interpretInteger(line.substring(startIndex, endIndex), 6);
 					}
 				} else {												 // just register
-					if(endIndex - startIndex != 1) throw new IllegalArgumentException("Invalid indirect: " + line);
+					// Make sure its just the register
+					endIndex = startIndex + 1;
+					char c;
+					while((c = line.charAt(endIndex)) != ']') {
+						// Anything that isn't whitespace its invalid
+						if(!Character.isWhitespace(c)) throw new IllegalArgumentException("Invalid indirect: " + line);
+						endIndex++;
+					}
+					
 					sReg = interpretRegister(line.charAt(startIndex));
 				}
 				
@@ -300,7 +396,8 @@ public class E8Assembler {
 			instruction |= value & 0xFF;
 		}
 		
-		return Integer.toHexString(instruction).toUpperCase();
+		// Return 4 hex digits
+		return toHex(instruction, 4);
 	}
 	
 	/**
