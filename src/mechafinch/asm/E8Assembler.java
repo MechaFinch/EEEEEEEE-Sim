@@ -1,7 +1,10 @@
 package mechafinch.asm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * I'm at the point where I *need* one of these so... 
@@ -166,10 +169,10 @@ public class E8Assembler {
 			if(upper.startsWith("DB")) {			// Define Bytes
 				assembleDB(line, dataBits, ramAddrBits, ramSections);
 			} else if(upper.startsWith("LD")) {		// Load
-				inst = assembleLD(line, dataBits, ramAddrBits);
+				inst = assembleLD(line);
 				currentROMSection.addData(inst, 4);
 			} else if(upper.startsWith("ST")) {		// Store
-				inst = assembleST(line, dataBits, ramAddrBits);
+				inst = assembleST(line);
 				currentROMSection.addData(inst, 4);
 			}
 			
@@ -217,84 +220,28 @@ public class E8Assembler {
 		//return "08080A0000050F000102030401000400003047410544013447";
 	}
 	
-	/**
-	 * Assembles a ST line
-	 * 
-	 * @param line
-	 * @param dataBits
-	 * @param ramAddrBits
-	 * @return
-	 */
-	private static String assembleST(String line, int dataBits, int ramAddrBits) {
-		// General-use indicies
-		int startIndex = 2, endIndex;
+	private static String assembleST(String line) {
+		int startIndex = indexOfNotWhitespaceComma(line, 2);
 		
-		// Advance to first non-whitespace - expect source register
-		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
-		int reg = interpretRegister(line.charAt(startIndex++)); // get that register
+		// Source register
+		int reg = interpretRegister(line.charAt(startIndex++));
 		
-		// Advance to next non-whitespace - expect destination address
-		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		// Setup
+		startIndex = indexOfNotWhitespaceComma(line, startIndex);
 		
 		int instruction = 0;
 		
-		// Either indexed or indirect, make sure it is (find opening and closing brackets too)
-		if(line.charAt(startIndex++) != '[') throw new IllegalArgumentException("Destination must be indexed or indirect: " + line);
-		while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
-		endIndex = startIndex + 1;						// There should be at least one character before the closing bracket
-		while(line.charAt(endIndex) != ']') endIndex++;
+		// Indexed or indirect
+		if(line.charAt(startIndex) != '[') throw new IllegalArgumentException("Destination must be indexed or indirect: " + line);
 		
-		// Indexed vs indirect
-		if(line.substring(startIndex, endIndex).contains("+") || isRegister(line.charAt(startIndex))) { // Must be indirect
-			int sReg = -1, offset = 0; // These can be in either order
-			
-			if(line.substring(startIndex, endIndex).contains("+")) { // Has register & offset
-				// register & offset can be either order but there must be both
-				if(isRegister(line.charAt(startIndex))) {
-					sReg = interpretRegister(line.charAt(startIndex));
-				} else {
-					offset = interpretInteger(line.substring(startIndex, line.indexOf('+')).trim(), 6); // The index goes until the plus, 6 bits max
-				}
-				
-				// Find second part
-				startIndex = line.indexOf('+') + 1;
-				while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
-				
-				// This must be the opposite of the first
-				if(isRegister(line.charAt(startIndex))) {
-					if(sReg != -1) throw new IllegalArgumentException("Cannot have two registers in indirect: " + line);
-					sReg = interpretRegister(line.charAt(startIndex));
-				} else {
-					if(sReg == -1) throw new IllegalArgumentException("Cannot have two offsets in indirect: " + line);
-					offset = interpretInteger(line.substring(startIndex, endIndex), 6);
-				}
-			} else { // only has a register
-				// Make sure its just the register
-				endIndex = startIndex + 1;
-				char c;
-				while((c = line.charAt(endIndex)) != ']') {
-					// Anything that isn't whitespace its invalid
-					if(!Character.isWhitespace(c)) throw new IllegalArgumentException("Invalid indirect: " + line);
-					endIndex++;
-				}
-				
-				sReg = interpretRegister(line.charAt(startIndex));
-			}
-			
-			// Create the instruction, ORing in proper values
-			instruction = 0b00111100_00000000;
-			instruction |= reg << 8;
-			instruction |= sReg << 6;
-			instruction |= offset & 0x3F; // Keep it 6 bits, just in case?
-		} else {	// Must be indexed
-			int value = interpretInteger(line.substring(startIndex, endIndex), 8);
-			
-			// slapp the instruction
-			instruction = 0b00110100_00000000;
-			instruction |= reg << 8;
-			instruction |= value & 0xFF;
+		String sub = line.substring(++startIndex, line.indexOf(']')).trim();
+		if(sub.contains("+") || isRegister(sub.charAt(0))) { // Indirect
+			instruction = 0b00111100_00000000 | interpretIndirect(line, sub, 6);
+		} else { // Indexed
+			instruction = 0b00110100_00000000 | interpretInteger(sub, 8);
 		}
 		
+		instruction |= reg << 8;
 		return toHex(instruction, 4);
 	}
 	
@@ -304,99 +251,37 @@ public class E8Assembler {
 	 * @param line
 	 * @param dataBits
 	 * @param ramAddrBits
-	 * @param romAddrBits
-	 * @return The assembled instruction
+	 * @return
 	 */
-	private static String assembleLD(String line, int dataBits, int ramAddrBits) {
-		// Determine destination register
-		int startIndex = 2, endIndex;
+	private static String assembleLD(String line) {
+		int startIndex = indexOfNotWhitespaceComma(line, 2);
 		
-		// First non-whitespace
-		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
-		
-		// We expect a register (also increment to next char
+		// Get destination reg
 		int reg = interpretRegister(line.charAt(startIndex++));
 		
-		// Continue until next non-whitespace
-		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
-		
+		// Setup
+		startIndex = indexOfNotWhitespaceComma(line, startIndex);
 		int instruction = 0;
 		
-		// Determine immediate vs register vs indexed/indirect
-		if(isRegister(line.charAt(startIndex))) {	// Register
+		// Immediate, register, indexed, or indirect
+		if(isRegister(line.charAt(startIndex))) { // Register
 			int sReg = interpretRegister(line.charAt(startIndex));
-			
-			instruction = 0b00101000_00000000; // load register template
-			instruction |= reg << 8;
+			instruction = 0b00101000_00000000;
 			instruction |= sReg << 6;
-		} else if(line.charAt(startIndex) == '[') {	// Indexed or indirect
-			// Find closing ], find next non-whitespace
-			startIndex++;
-			while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
-			endIndex = startIndex + 1;
-			while(line.charAt(endIndex) != ']') endIndex++;
+		} else if(line.charAt(startIndex) == '[') { // Indexed/indirect
+			// Get interior of []
+			String sub = line.substring(startIndex + 1, line.indexOf(']')).trim();
 			
-			// Determine if the value is an address or offset
-			if(line.substring(startIndex, endIndex).contains("+") || isRegister(line.charAt(startIndex))) {	// register and/or offset
-				int sReg = -1, offset = 0;
-				
-				if(line.substring(startIndex, endIndex).contains("+")) { // register + offset
-					// might be register + offset or offset + register
-					if(isRegister(line.charAt(startIndex))) {
-						sReg = interpretRegister(line.charAt(startIndex));
-					} else {
-						offset = interpretInteger(line.substring(startIndex, line.indexOf('+')).trim(), 6);
-					}
-					
-					// Find second half
-					startIndex = line.indexOf('+') + 1;
-					while(Character.isWhitespace(line.charAt(startIndex))) startIndex++;
-					
-					// find the opposite one, throw exception if its a duplicate
-					if(isRegister(line.charAt(startIndex))) {
-						if(sReg != -1) throw new IllegalArgumentException("Cannot have two registers in indirect: " + line);
-						sReg = interpretRegister(line.charAt(startIndex));
-					} else {
-						if(sReg == -1) throw new IllegalArgumentException("Cannot have two offsets in indirect: " + line);
-						offset = interpretInteger(line.substring(startIndex, endIndex), 6);
-					}
-				} else {												 // just register
-					// Make sure its just the register
-					endIndex = startIndex + 1;
-					char c;
-					while((c = line.charAt(endIndex)) != ']') {
-						// Anything that isn't whitespace its invalid
-						if(!Character.isWhitespace(c)) throw new IllegalArgumentException("Invalid indirect: " + line);
-						endIndex++;
-					}
-					
-					sReg = interpretRegister(line.charAt(startIndex));
-				}
-				
-				// Create the instruction
-				instruction = 0b0111000_00000000;
-				instruction |= reg << 8;
-				instruction |= sReg << 6;
-				instruction |= offset & 0x3F; // keep it to 6 bits
-			} else { // immediate address, indexed
-				// nab the immediate, create the instruction
-				int offset = interpretInteger(line.substring(startIndex, line.length() - 1), 8);
-				
-				// slap together the instruction
-				instruction = 0b00110000_00000000;
-				instruction |= reg << 8;
-				instruction |= offset & 0xFF; // 8 bits
+			if(sub.contains("+") || isRegister(sub.charAt(0))) { // Has a register or addition? indirect
+				instruction = 0b00111000_00000000 | interpretIndirect(line, sub, 6);
+			} else { // Otherwise indexed
+				instruction = 0b00110000_00000000 | interpretInteger(sub, 8);
 			}
 		} else { // Immediate
-			int value = interpretInteger(line.substring(startIndex), 8);
-			
-			// its quick its easy and its free
-			instruction = 0b00100000_00000000;
-			instruction |= reg << 8;
-			instruction |= value & 0xFF;
+			instruction = 0b00100000_00000000 | interpretInteger(line.substring(startIndex), 8);
 		}
 		
-		// Return 4 hex digits
+		instruction |= reg << 8;
 		return toHex(instruction, 4);
 	}
 	
@@ -409,63 +294,45 @@ public class E8Assembler {
 	 * @param ramSections
 	 */
 	private static void assembleDB(String line, int dataBits, int ramAddrBits, ArrayList<ProgramSection> ramSections) {
-		// Get start address
-		int startIndex = 2, endIndex;
+		// Isolate start address
+		int startIndex = indexOfNotWhitespaceComma(line, 2),
+			endIndex = indexOfWhitespaceComma(line, startIndex);
 		
-		// Walk until not whitespace, we've found the address
-		while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
-		// Walk until whitespace, we've finished the address
-		endIndex = startIndex;
-		while(!(isWhitespaceComma(line.charAt(endIndex)))) endIndex++;
+		int startAddress = interpretInteger(line.substring(startIndex), endIndex);
 		
-		// Try to interpret the address
-		int startingAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits);
+		// Start the section
+		ProgramSection sec = new ProgramSection(startAddress, 0);
 		
-		
-		// Start a RAM section
-		ProgramSection sec = new ProgramSection(startingAddress, 0);
-		
-		// Add values
-		for(startIndex = endIndex; startIndex < line.length(); startIndex = endIndex) { // Loop by starting from rightmost known whitespace/comma
-			// Increment until we find a literal
-			while(isWhitespaceComma(line.charAt(startIndex))) startIndex++;
+		// Add them values
+		// Loop from known whitespace/comma
+		for(startIndex = endIndex; startIndex < line.length(); startIndex = endIndex) {
+			startIndex = indexOfNotWhitespaceComma(line, startIndex);
 			
-			// Determine and apply if the literal is a string or number
-			char startChar = line.charAt(startIndex);
-			if(startChar == '"') {						// String literal
-				endIndex = startIndex++ + 1;
+			// Apply literal string or integer
+			char firstChar = line.charAt(startIndex);
+			if(firstChar == '"') {	// String
+				// Find closing " and interpret string
+				endIndex = line.indexOf('"', ++startIndex);
 				
-				// Determine the end of the string
-				while(line.charAt(endIndex) != '"') endIndex++;
-				
-				// Interpret string literal and add as bytes
-				String strHex = interpretStringLiteral(line.substring(startIndex, endIndex));
-				sec.addData(strHex, 2);
+				String hex = interpretStringLiteral(line.substring(startIndex, endIndex));
+				sec.addData(hex, 2);
 				endIndex++;
+			} else if(firstChar == '\'') { // Character
+				if(line.charAt(startIndex + 2) != '\'') throw new IllegalArgumentException("Invalid character literal: " + line.substring(startIndex));
 				
-			} else if(startChar == '\'') {				// Character literal
-				// Make sure its a single character
-				if(line.charAt(startIndex + 2) != '\'') throw new IllegalArgumentException("Invalid character literal starting at " + line.substring(startIndex));
-				
-				// Interpret
 				sec.addData(toHex(line.charAt(startIndex + 1), 2), 2);
 				endIndex = startIndex + 2;
+			} else if(Character.isDigit(firstChar)) { // Integer
+				// Find end
+				endIndex = indexOfWhitespaceComma(line, startIndex);
 				
-			} else if(Character.isDigit(startChar)) {	// Integer literal
-				// Find end of literal
-				endIndex = startIndex;
-				while(endIndex < line.length() && !isWhitespaceComma(line.charAt(endIndex))) endIndex++;
-				
-				// Interpret, words only
 				sec.addData(toHex(interpretInteger(line.substring(startIndex, endIndex), dataBits), 2), 2);
 				endIndex++;
-				
-			} else {									// oops something went wrong
-				throw new IllegalArgumentException("Invalid literal starting at " + line.substring(startIndex));
+			} else { // Error
+				throw new IllegalArgumentException("Invalid literal: " + line.substring(startIndex));
 			}
 		}
 		
-		// Add section
 		ramSections.add(sec);
 	}
 	
@@ -568,6 +435,68 @@ public class E8Assembler {
 	}
 	
 	/**
+	 * Interprets an indirect address (register or register + offset)
+	 * 
+	 * @param line The full line for exceptions
+	 * @param str The string to interpret (contents of the brackets not including them, trimmed)
+	 * @param bitWidth The width of the offset
+	 * @return The bit-pattern integer of both register and offset
+	 */
+	private static int interpretIndirect(String line, String str, int bitWidth) {
+		// Source register, offset
+		int sReg = -1, offset = 0;
+		
+		if(str.contains("+")) { // Has register & offset
+			// Can be either direction
+			if(isRegister(str.charAt(0))) { // Register first
+				sReg = interpretRegister(str.charAt(0));
+			} else {						// Offset first
+				offset = interpretInteger(str.substring(0, str.indexOf('+')).trim(), 6);
+			}
+			
+			// Walk to second part
+			int index = str.indexOf('+') + 1;
+			while(Character.isWhitespace(str.charAt(index))) index++;
+			str = str.substring(index);
+			
+			// Interpret opposite thing or except
+			if(isRegister(str.charAt(0))) {
+				if(sReg != -1) throw new IllegalArgumentException("Cannot have two registers in indirect: " + line);
+				sReg = interpretRegister(str.charAt(0));
+			} else {
+				if(sReg == -1) throw new IllegalArgumentException("Cannot have two offsets in indirect: " + line);
+				offset = interpretInteger(str.substring(0), 6);
+			}
+		} else {				// Should be register only
+			// Make sure of it
+			if(str.length() != 1) { // should work because trim
+				throw new IllegalArgumentException("Invalid indirect: " + line);
+			}
+			
+			sReg = interpretRegister(str.charAt(0));
+		}
+		
+		// Apply binary
+		int ret = offset & createMask(bitWidth);
+		ret |= sReg << bitWidth;
+		return ret;  
+	}
+	
+	/**
+	 * Creates a bit mask off bitWidth 1's, to limit things to that many bits
+	 * 
+	 * @param bitWidth
+	 * @return Bitmask of bitWidth bits
+	 */
+	private static int createMask(int bitWidth) {
+		int i = 0;
+		
+		while(bitWidth-- > 0) i = (i << 1) | 1;
+		
+		return i;
+	}
+	
+	/**
 	 * Determines the register (a=0, d=3) represented by the given character
 	 * 
 	 * @param c
@@ -603,13 +532,63 @@ public class E8Assembler {
 	}
 	
 	/**
-	 * Determines if a character is whitespace or a comma, or something else
+	 * Returns the index of the first character that is whitespace
 	 * 
-	 * @param c The character
-	 * @return True if the character is whitespace or a comma
+	 * @param s
+	 * @param start
+	 * @return
 	 */
-	private static boolean isWhitespaceComma(char c) {
-		return Character.isWhitespace(c) || c == ',';
+	private static int indexOfWhitespace(String s, int start) {
+		for(int i = start; i < s.length(); i++) {
+			if(Character.isWhitespace(s.charAt(i))) return i;
+		}
+		
+		return -1;
+	}
+	
+	/**
+	 * Returns the index of the first character that is whitespace or a comma
+	 * 
+	 * @param s
+	 * @param start
+	 * @return
+	 */
+	private static int indexOfWhitespaceComma(String s, int start) {
+		for(int i = start; i < s.length(); i++) {
+			if(Character.isWhitespace(s.charAt(i)) || s.charAt(i) == ',') return i;
+		}
+		
+		return -1;
+	}
+	
+	/**
+	 * Returns the index of the first character that isn't whitespace
+	 * 
+	 * @param s
+	 * @param start
+	 * @return
+	 */
+	private static int indexOfNotWhitespace(String s, int start) {
+		for(int i = start; i < s.length(); i++) {
+			if(!Character.isWhitespace(s.charAt(i))) return i;
+		}
+		
+		return -1;
+	}
+	
+	/**
+	 * Returns the index of the first character that isn't whitespace or a comma
+	 * 
+	 * @param s
+	 * @param start
+	 * @return
+	 */
+	private static int indexOfNotWhitespaceComma(String s, int start) {
+		for(int i = start; i < s.length(); i++) {
+			if(!(Character.isWhitespace(s.charAt(i)) || s.charAt(i) == ',')) return i;
+		}
+		
+		return -1;
 	}
 	
 	/**

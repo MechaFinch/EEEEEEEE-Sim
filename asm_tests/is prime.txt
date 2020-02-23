@@ -20,6 +20,7 @@ end;
 #define var_i 1
 
 DB var_non_prime "Not prime.", 00
+DB 2 "Not prime.", 00
 DB var_prime "Prime!", 00
 
 ; init
