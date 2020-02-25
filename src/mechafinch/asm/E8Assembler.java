@@ -127,6 +127,30 @@ public class E8Assembler {
 		 */
 		HashMap<String, Integer> labels = new HashMap<>();
 		
+		// i=index ln=line number
+		for(int i = 0, ln = 0; i < rawLines.size(); i++) {
+		    String line = rawLines.get(i);
+		    
+		    // Found a label?
+		    if(line.contains(":")) {
+		        labels.put(line.substring(0, line.indexOf(':')), ln);
+		        
+		        // If the label is its own line
+		        if(line.substring(line.indexOf(':') + 1).equals("")) {
+		            // remove the line
+		            rawLines.remove(i); // The label will point to the next inst.
+		        } else { // otherwise remove the label from the line
+		            rawLines.set(i, line.substring(line.indexOf(':') + 1).trim());
+		        }
+		    }
+		    
+		    line = rawLines.get(i);
+		    if(!line.startsWith("DB")) {
+		        // Increment line number only if this isn't a DB
+		        ln++;
+		    }
+		}
+		
 		for(int ln = 0; ln < rawLines.size(); ln++) {
 			String line = rawLines.get(ln);
 			
@@ -170,11 +194,15 @@ public class E8Assembler {
 				assembleDB(line, dataBits, ramAddrBits, ramSections);
 			} else if(upper.startsWith("LD")) {		// Load
 				inst = assembleLD(line);
-				currentROMSection.addData(inst, 4);
 			} else if(upper.startsWith("ST")) {		// Store
 				inst = assembleST(line);
-				currentROMSection.addData(inst, 4);
+			} else if(upper.startsWith("ADD")) {	// Add
+				inst = assembleADD(line);
+			} else if(upper.startsWith("SUB")) {	// Subtract
+				inst = assembleSUB(line);
 			}
+			
+			if(!inst.equals("")) currentROMSection.addData(inst, 4);
 			
 			// Print the instruction
 			System.out.println(String.format("%-16s", line) + " " + inst);
@@ -220,6 +248,42 @@ public class E8Assembler {
 		//return "08080A0000050F000102030401000400003047410544013447";
 	}
 	
+	private static String assembleSUB(String line) {
+		int instruction;
+		
+		if(line.startsWith("SUBC")) {
+			instruction = 0b01000110_00000000 | interpretArithmeticArguments(line.substring(4).trim());
+		} else {
+			instruction = 0b01000100_00000000 | interpretArithmeticArguments(line.substring(3).trim());
+		}
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles an ADD line
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assembleADD(String line) {
+		int instruction;
+		
+		if(line.startsWith("ADDC")) {
+			instruction = 0b01000010_00000000 | interpretArithmeticArguments(line.substring(4).trim());
+		} else {
+			instruction = 0b01000000_00000000 | interpretArithmeticArguments(line.substring(3).trim());
+		}
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles an ST line
+	 * 
+	 * @param line
+	 * @return
+	 */
 	private static String assembleST(String line) {
 		int startIndex = indexOfNotWhitespaceComma(line, 2);
 		
@@ -249,8 +313,6 @@ public class E8Assembler {
 	 * Assembles a LD line
 	 * 
 	 * @param line
-	 * @param dataBits
-	 * @param ramAddrBits
 	 * @return
 	 */
 	private static String assembleLD(String line) {
@@ -298,7 +360,7 @@ public class E8Assembler {
 		int startIndex = indexOfNotWhitespaceComma(line, 2),
 			endIndex = indexOfWhitespaceComma(line, startIndex);
 		
-		int startAddress = interpretInteger(line.substring(startIndex), endIndex);
+		int startAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits);
 		
 		// Start the section
 		ProgramSection sec = new ProgramSection(startAddress, 0);
@@ -435,6 +497,32 @@ public class E8Assembler {
 	}
 	
 	/**
+	 * Interprets and partially assembles an A-type instruction
+	 * 
+	 * @param str
+	 * @return The bit-pattern integer of the sources and destination
+	 */
+	private static int interpretArithmeticArguments(String str) {
+		int ret = 0, index = 0;
+		
+		ret |= (interpretRegister(str.charAt(0))) << 6;		// Destination register
+		index = indexOfNotWhitespaceComma(str, 1);
+		ret |= (interpretRegister(str.charAt(index))) << 4;	// Source register A
+		
+		// Interpret register or immedate
+		index = indexOfNotWhitespaceComma(str, index + 1);
+		String sub = str.substring(index);
+		if(isRegister(sub.charAt(0))) { // Register
+			ret |= interpretRegister(sub.charAt(0));
+		} else { // Immediate
+			ret |= 0x100; // Bit indicator
+			ret |= interpretInteger(sub, 4);
+		}
+		
+		return ret;
+	}
+	
+	/**
 	 * Interprets an indirect address (register or register + offset)
 	 * 
 	 * @param line The full line for exceptions
@@ -558,7 +646,8 @@ public class E8Assembler {
 			if(Character.isWhitespace(s.charAt(i)) || s.charAt(i) == ',') return i;
 		}
 		
-		return -1;
+		// If we reached the end of the line, treat it as whitespace
+		return s.length();
 	}
 	
 	/**
