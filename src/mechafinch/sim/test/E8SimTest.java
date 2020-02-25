@@ -19,7 +19,7 @@ public class E8SimTest {
 		/*
 		 * Assemble
 		 */
-		BufferedReader br = new BufferedReader(new FileReader("asm_tests/hello world.txt"));
+		BufferedReader br = new BufferedReader(new FileReader("asm_tests/is prime.txt"));
 		List<String> linesList = br.lines().collect(Collectors.toList());
 		br.close();
 		

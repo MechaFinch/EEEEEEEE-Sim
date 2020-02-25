@@ -200,6 +200,14 @@ public class E8Assembler {
 				inst = assembleADD(line);
 			} else if(upper.startsWith("SUB")) {	// Subtract
 				inst = assembleSUB(line);
+			} else if(upper.startsWith("AND") || upper.startsWith("NAND")) {	// Logical AND
+				inst = assembleAND(line);
+			} else if(upper.startsWith("OR") || upper.startsWith("NOR") || upper.startsWith("XOR") || upper.startsWith("XNOR")) {		// Logical OR family
+				inst = assembleOR(line);
+			} else if(upper.startsWith("NOT")) {								// NOT
+				inst = assembleNOT(line);
+			} else if(upper.startsWith("SH") || upper.startsWith("SRA")) { 		// Shifts
+				inst = assembleShifts(line);
 			}
 			
 			if(!inst.equals("")) currentROMSection.addData(inst, 4);
@@ -248,6 +256,87 @@ public class E8Assembler {
 		//return "08080A0000050F000102030401000400003047410544013447";
 	}
 	
+	/**
+	 * Assembles SHL, SHR, and SRA lines
+	 * @param line
+	 * @return
+	 */
+	private static String assembleShifts(String line) {
+		// All of these have the same length mnemonic
+		int instruction = interpretArithmeticArguments(line.substring(3).trim());
+		
+		if(line.startsWith("SHL")) {
+			instruction |= 0b01010110_00000000;
+		} else if(line.startsWith("SHR")) {
+			instruction |= 0b01011000_00000000;
+		} else { // SRA
+			instruction |= 0b01011010_00000000;
+		}
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles a NOT line
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assembleNOT(String line) {
+		
+		// this doesn't have B, but we can use the code from before by slapping on an A
+		line = line + ", A";
+		int instruction = 0b01010100_00000000 | interpretArithmeticArguments(line.substring(3).trim());
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles an OR/NOR/XOR/XNOR line
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assembleOR(String line) {
+		int instruction;
+		
+		if(line.startsWith("OR")) {			// OR
+			instruction = 0b01001100_00000000 | interpretArithmeticArguments(line.substring(2).trim());
+		} else if(line.startsWith("NOR")) {	// NOR
+			instruction = 0b01001110_00000000 | interpretArithmeticArguments(line.substring(3).trim());
+		} else if(line.startsWith("XOR")) {	// XOR
+			instruction = 0b01010000_00000000 | interpretArithmeticArguments(line.substring(3).trim());
+		} else {							// XNOR
+			instruction = 0b01010010_00000000 | interpretArithmeticArguments(line.substring(4).trim());
+		}
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles an AND/NAND line
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assembleAND(String line) {
+		int instruction;
+		
+		if(line.startsWith("AND")) {	// AND
+			instruction = 0b01001000_00000000 | interpretArithmeticArguments(line.substring(3).trim());
+		} else {						// NAND
+			instruction = 0b01001010_00000000 | interpretArithmeticArguments(line.substring(4).trim());
+		}
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles a SUB/SUBC line
+	 * 
+	 * @param line
+	 * @return
+	 */
 	private static String assembleSUB(String line) {
 		int instruction;
 		
@@ -261,7 +350,7 @@ public class E8Assembler {
 	}
 	
 	/**
-	 * Assembles an ADD line
+	 * Assembles an ADD/ADDC line
 	 * 
 	 * @param line
 	 * @return
@@ -620,21 +709,6 @@ public class E8Assembler {
 	}
 	
 	/**
-	 * Returns the index of the first character that is whitespace
-	 * 
-	 * @param s
-	 * @param start
-	 * @return
-	 */
-	private static int indexOfWhitespace(String s, int start) {
-		for(int i = start; i < s.length(); i++) {
-			if(Character.isWhitespace(s.charAt(i))) return i;
-		}
-		
-		return -1;
-	}
-	
-	/**
 	 * Returns the index of the first character that is whitespace or a comma
 	 * 
 	 * @param s
@@ -648,21 +722,6 @@ public class E8Assembler {
 		
 		// If we reached the end of the line, treat it as whitespace
 		return s.length();
-	}
-	
-	/**
-	 * Returns the index of the first character that isn't whitespace
-	 * 
-	 * @param s
-	 * @param start
-	 * @return
-	 */
-	private static int indexOfNotWhitespace(String s, int start) {
-		for(int i = start; i < s.length(); i++) {
-			if(!Character.isWhitespace(s.charAt(i))) return i;
-		}
-		
-		return -1;
 	}
 	
 	/**

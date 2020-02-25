@@ -20,7 +20,6 @@ end;
 #define var_i 1
 
 DB var_non_prime "Not prime.", 00
-DB 2 "Not prime.", 00
 DB var_prime "Prime!", 00
 
 ; init
@@ -42,7 +41,7 @@ loop:
 		LD B, [var_i]
 		JSR func_mod
 		BNZ A, loop_end
-		LD A, non_prime
+		LD A, var_non_prime
 		JSR func_println
 		INT 0x00
 	
@@ -53,7 +52,7 @@ loop:
 	JMP loop
 
 break:
-LD A, prime
+LD A, var_prime
 JSR func_println
 INT 0x00
 
