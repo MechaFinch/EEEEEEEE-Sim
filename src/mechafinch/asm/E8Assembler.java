@@ -1,10 +1,7 @@
 package mechafinch.asm;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * I'm at the point where I *need* one of these so... 
@@ -184,33 +181,46 @@ public class E8Assembler {
 		
 		ProgramSection currentROMSection = new ProgramSection(0, 1);
 		                          
-		for(int ln = 0; ln < rawLines.size(); ln++) {
+		for(int ln = 0, addr = 0; ln < rawLines.size(); ln++) {
 			String line = rawLines.get(ln),		// The raw line
 				   upper = line.toUpperCase(),	// The uppercase line
 				   inst = "";					// The assembled instruction
 			
 			// Switch over opcodes
 			if(upper.startsWith("DB")) {			// Define Bytes
-				assembleDB(line, dataBits, ramAddrBits, ramSections);
+				assembleDB(upper, dataBits, ramAddrBits, ramSections);
+				addr--;
 			} else if(upper.startsWith("LD")) {		// Load
-				inst = assembleLD(line);
+				inst = assembleLD(upper);
 			} else if(upper.startsWith("ST")) {		// Store
-				inst = assembleST(line);
+				inst = assembleST(upper);
 			} else if(upper.startsWith("ADD")) {	// Add
-				inst = assembleADD(line);
+				inst = assembleADD(upper);
 			} else if(upper.startsWith("SUB")) {	// Subtract
-				inst = assembleSUB(line);
+				inst = assembleSUB(upper);
 			} else if(upper.startsWith("AND") || upper.startsWith("NAND")) {	// Logical AND
-				inst = assembleAND(line);
+				inst = assembleAND(upper);
 			} else if(upper.startsWith("OR") || upper.startsWith("NOR") || upper.startsWith("XOR") || upper.startsWith("XNOR")) {		// Logical OR family
-				inst = assembleOR(line);
+				inst = assembleOR(upper);
 			} else if(upper.startsWith("NOT")) {								// NOT
-				inst = assembleNOT(line);
+				inst = assembleNOT(upper);
 			} else if(upper.startsWith("SH") || upper.startsWith("SRA")) { 		// Shifts
-				inst = assembleShifts(line);
+				inst = assembleShifts(upper);
+			} else if(upper.startsWith("JMP")) {	// Jump
+				inst = assembleJMP(line, labels);	// things with labels need the mixed-case one
+			} else if(upper.startsWith("JSR")) {	// Jump to subroutine
+				inst = assembleJSR(line, labels);
+			} else if(upper.startsWith("RET")) {	// Return from subroutine
+				inst = "7000";
+			} else if(upper.startsWith("BEQ") || upper.startsWith("BLT") || upper.startsWith("BGT")) {	// 3-argument branches
+				inst = assemble3Branch(line, labels, addr);
+			} else if(upper.startsWith("BZ") || upper.startsWith("BNZ")) {								// 2-argument branches
+				inst = assemble2Branch(line, labels, addr);
 			}
 			
 			if(!inst.equals("")) currentROMSection.addData(inst, 4);
+			
+			addr++;
 			
 			// Print the instruction
 			System.out.println(String.format("%-16s", line) + " " + inst);
@@ -257,7 +267,155 @@ public class E8Assembler {
 	}
 	
 	/**
+	 * Assembles lines with 2-argument branches (BZ BNZ)
+	 * 
+	 * @param line
+	 * @param labels
+	 * @param location
+	 * @return
+	 */
+	private static String assemble2Branch(String line, HashMap<String, Integer> labels, int location) {
+		if(line.toUpperCase().startsWith("BNZ")) line = line.substring(1); // convenience
+		
+		int index = indexOfNotWhitespaceComma(line, 2),
+			ra = interpretRegister(line.charAt(index));
+		index = indexOfNotWhitespaceComma(line, index + 1);
+		int offset = 0,
+			instruction = 0;
+		
+		String str = line.substring(indexOfNotWhitespaceComma(line, index)).trim();
+		
+		// Label or immediate
+		if(labels.containsKey(str)) {
+			offset = labels.get(str) - location;
+			
+			if(offset < 0) instruction |= 0b00000100_00000000;
+		} else {
+			// Either has +, -, or nothing (positive)
+			if(str.startsWith("+")) {
+				offset = interpretInteger(str.substring(1), 6);
+			} else if(str.startsWith("-")) {
+				offset = interpretInteger(str.substring(1), 6);
+				instruction |= 0b00000100_00000000;
+			} else {
+				offset = interpretInteger(str, 6);
+			}
+		}
+		
+		if(line.startsWith("BZ")) {
+			instruction |= 0b10011000_00000000;
+		} else {
+			instruction |= 0b10011001_00000000;
+		}
+		
+		instruction |= (ra << 6);
+		instruction |= offset;
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles lines with 3-argument branches (BEQ BLT BGT)
+	 * 
+	 * @param line
+	 * @param labels
+	 * @param location
+	 * @return
+	 */
+	private static String assemble3Branch(String line, HashMap<String, Integer> labels, int location) {
+		// Determine registers
+		int index = indexOfNotWhitespaceComma(line, 3),
+			ra = interpretRegister(line.charAt(index));
+		index = indexOfNotWhitespaceComma(line, index + 1);
+		int rb = interpretRegister(line.charAt(index)),
+			offset = 0,
+			instruction = 0;
+		
+		String str = line.substring(indexOfNotWhitespaceComma(line, index + 1)).trim();
+		
+		// Label?
+		if(labels.containsKey(str)) {
+			offset = labels.get(str) - location;
+			
+			if(offset < 0) instruction |= 0b00000100_00000000;
+		} else {
+			// Either has +, -, or nothing (positive)
+			if(str.startsWith("+")) {
+				offset = interpretInteger(str.substring(1), 6);
+			} else if(str.startsWith("-")) {
+				offset = interpretInteger(str.substring(1), 6);
+				instruction |= 0b00000100_00000000;
+			} else {
+				offset = interpretInteger(str, 6);
+			}
+		}
+		
+		// Determine which of the 3
+		switch(line.toUpperCase().substring(0, 3)) {
+			case "BEQ":
+				instruction |= 0b10000000_00000000;
+				break;
+				
+			case "BLT":
+				instruction |= 0b10001000_00000000;
+				break;
+				
+			case "BGT":
+				instruction |= 0b10010000_00000000;
+				break;
+		}
+		
+		// Add in those registers
+		instruction |= (ra << 8);
+		instruction |= (rb << 6);
+		instruction |= offset;
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles a JSR line
+	 * 
+	 * @param line
+	 * @param labels
+	 * @return
+	 */
+	private static String assembleJSR(String line, HashMap<String, Integer> labels) {
+		// Is this a label?
+		String str = line.substring(3).trim();
+		if(labels.containsKey(str)) {
+			return toHex(0b01101000_00000000 | labels.get(str), 4);
+		} else if(str.startsWith("[")) { // Indirect
+			str = line.substring(1, line.indexOf(']')).trim();
+			
+			return toHex(0b01101100_00000000 | interpretIndirect(line, str, 8), 4);
+		} else { // Direct
+			return toHex(0b01101000_00000000 | interpretInteger(str, 10), 4);
+		}
+	}
+	
+	/**
+	 * Assembles a JMP line
+	 * 
+	 * @param line
+	 * @param labels
+	 * @return
+	 */
+	private static String assembleJMP(String line, HashMap<String, Integer> labels) {
+		// Is this a label?
+		String str = line.substring(3).trim();
+		if(labels.containsKey(str)) {
+			return toHex(0b01100000_00000000 | labels.get(str), 4);
+		} else if(str.startsWith("[")) { // Indirect
+			str = line.substring(1, line.indexOf(']')).trim();
+			
+			return toHex(0b01100100_00000000 | interpretIndirect(line, str, 8), 4);
+		} else { // Direct
+			return toHex(0b01100000_00000000 | interpretInteger(str, 10), 4);
+		}
+	}
+	
+	/**
 	 * Assembles SHL, SHR, and SRA lines
+	 * 
 	 * @param line
 	 * @return
 	 */

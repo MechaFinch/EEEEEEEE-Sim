@@ -60,6 +60,7 @@ func_mod: ; a,b consumed ret a
 	BLT A, B, func_mod_end ; if A < B, return
 	SUB A, A, B ; else subtract b from a
 	JMP func_mod
+func_mod_end:
 	RET
 	
 func_square: ; a,b,c consumed ret a
@@ -71,6 +72,7 @@ func_square: ; a,b,c consumed ret a
 		SUB C, C, 1
 		ADD A, A, B
 		JMP func_square_loop
+	func_square_end:
 	RET
 	
 func_println: ; a,b consumed ret none
