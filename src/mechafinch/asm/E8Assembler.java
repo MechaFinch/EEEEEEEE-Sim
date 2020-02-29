@@ -142,24 +142,10 @@ public class E8Assembler {
 		    }
 		    
 		    line = rawLines.get(i);
-		    if(!line.startsWith("DB")) {
-		        // Increment line number only if this isn't a DB
+		    if(!(line.startsWith("DB") || line.startsWith("$"))) {
+		        // Increment line number only if this isn't a DB or header
 		        ln++;
 		    }
-		}
-		
-		for(int ln = 0; ln < rawLines.size(); ln++) {
-			String line = rawLines.get(ln);
-			
-			if(line.contains(":")) { // Found a label
-				labels.put(line.substring(0, line.indexOf(':')), ln);
-				
-				if(line.substring(line.indexOf(':') + 1).equals("")) { // Label on its own line
-					rawLines.remove(ln); // Label will point to the next instruction
-				} else { // inline label
-					rawLines.set(ln, line.substring(line.indexOf(':') + 1).trim());
-				}
-			}
 		}
 		
 		// List labels
@@ -216,14 +202,22 @@ public class E8Assembler {
 				inst = assemble3Branch(line, labels, addr);
 			} else if(upper.startsWith("BZ") || upper.startsWith("BNZ")) {								// 2-argument branches
 				inst = assemble2Branch(line, labels, addr);
+			} else if(upper.startsWith("INT")) {	// Software interrupt
+				inst = assembleINT(upper);
+			} else if(upper.startsWith("PUSH")) {	// Push
+				inst = assemblePUSH(upper);
+			} else if(upper.startsWith("POP") || upper.startsWith("PEEK")) {
+				inst = assemblePOP(upper);
+			} else { // unknown instruction, properly ignore
+				addr--;
 			}
 			
 			if(!inst.equals("")) currentROMSection.addData(inst, 4);
 			
-			addr++;
-			
 			// Print the instruction
-			System.out.println(String.format("%-16s", line) + " " + inst);
+			System.out.println(String.format("%-2s %-22s", addr, line) + " " + inst);
+			
+			addr++;
 		}
 		
 		// Add last rom section
@@ -264,6 +258,60 @@ public class E8Assembler {
 		
 		// Return this test thing so we don't break the simulator
 		//return "08080A0000050F000102030401000400003047410544013447";
+	}
+	
+	/**
+	 * Assembles POP and PEEK lines 
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assemblePOP(String line) {
+		String str = line.substring(indexOfNotWhitespaceComma(line, line.startsWith("PEEK") ? 4 : 3)).trim();
+		int instruction = 0b10100010_00000000;
+		
+		if(line.startsWith("POP")) instruction |= 0b00000001_00000000;
+		
+		instruction |= (interpretRegister(str.charAt(0)) << 6);
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles a PUSH line
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assemblePUSH(String line) {
+		String str = line.substring(indexOfNotWhitespaceComma(line, 4)).trim();
+		int instruction = 0b10100000_00000000;
+		
+		if(isRegister(str.charAt(0))) { // Register
+			instruction |= interpretRegister(str.charAt(0));
+		} else {						// Immediate
+			instruction |= 0b00000001_00000000 | interpretInteger(str, 8);
+		}
+		
+		return toHex(instruction, 4);
+	}
+	
+	/**
+	 * Assembles an INT line
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assembleINT(String line) {
+		String str = line.substring(indexOfNotWhitespaceComma(line, 3)).trim();
+		int instruction = 0b11100000_00000000;
+		
+		if(isRegister(str.charAt(0))) { // Register
+			instruction |= 0b00000001_00000000 | interpretRegister(str.charAt(0));
+		} else {						// Immediate
+			instruction |= interpretInteger(str, 8);
+		}
+		
+		return toHex(instruction, 4);
 	}
 	
 	/**

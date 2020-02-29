@@ -68,7 +68,7 @@ public class E8SimTest {
 		E8Simulator testSim = new E8Simulator(ram, rom);
 		
 		//Execute order 66
-		for(int i = 0; i < 50 && testSim.step(); i++);
+		for(int i = 0; i < 1000 && testSim.step(); i++);
 		
 		//Dump state, execute, dump again
 		//TestUtil.dumpState(testSim);

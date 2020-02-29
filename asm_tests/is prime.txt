@@ -1,9 +1,10 @@
 $08080A ; bit info header
 
 ### multiline comment
-x = 43;
+x = 44;
 
-for(i = 0; square(i) < x; i++) {
+for(i = 2; square(i) < x; i++) {
+	// x % i == 0
 	if(mod(x, i) == 0) {
 		println("not prime");
 		end;
@@ -23,11 +24,11 @@ DB var_non_prime "Not prime.", 00
 DB var_prime "Prime!", 00
 
 ; init
-LD A, 43
+LD A, 44
 ST A, [var_x]
 
 ; loop
-LD A, 0
+LD A, 2
 ST A, [var_i]
 loop:
 	; check conditional

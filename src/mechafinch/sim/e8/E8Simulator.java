@@ -211,7 +211,7 @@ public class E8Simulator {
 	public boolean step() throws IOException {
 		//Flags for later
 		boolean incIP = true;	//Do we need to increment the instruction pointer
-		System.out.println(iType);
+		//  System.out.println(iType);
 		
 		//Execute instruction
 		switch(iType) {
