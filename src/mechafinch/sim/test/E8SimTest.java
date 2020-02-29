@@ -31,7 +31,7 @@ public class E8SimTest {
 		/*
 		 * Run
 		 */
-		int[] ram = new int[256],
+		int[] ram = new int[65536],
 			  rom = new int[1024];
 		/*	  romContents = new int[] {	//Test
 				0b00100000_01011100, // LD A, 0x5C
@@ -57,22 +57,25 @@ public class E8SimTest {
 			   romString = assembled[1];
 		
 		// Parse ram and rom
-		for(int i = 0; i < ramString.length(); i += 2) {
-			ram[i / 2] = Integer.parseInt(ramString.substring(i, i + 2), 16);
+		for(int i = 0; i < ramString.length(); i += 4) {
+			ram[i / 4] = Integer.parseInt(ramString.substring(i, i + 4), 16);
 		}
 		
 		for(int i = 0; i < romString.length(); i += 4) {
 			rom[i / 4] = Integer.parseInt(romString.substring(i, i + 4), 16);
 		}
 		
-		E8Simulator testSim = new E8Simulator(ram, rom);
+		E8Simulator testSim = new E8Simulator(ram, rom, 16);
 		
 		//Execute order 66
-		for(int i = 0; i < 1000 && testSim.step(); i++);
+		int i = 0;
+		for(; i < 15_000_000 && testSim.step(); i++);
 		
 		//Dump state, execute, dump again
 		//TestUtil.dumpState(testSim);
 		//testSim.step();
+		System.out.println();
 		TestUtil.dumpState(testSim);
+		System.out.println(i);
 	}
 }

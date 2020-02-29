@@ -1,0 +1,9 @@
+
+LD B, 0x60
+main:
+	INT 0x04 ; input char
+	BEQ A, B, end
+	INT 0x0C ; echo
+	JMP main
+end:
+INT 0x00

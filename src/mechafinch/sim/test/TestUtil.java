@@ -18,9 +18,9 @@ public class TestUtil {
 	public static void dumpState(E8Simulator sim) {
 		System.out.println("\nInstruction: " + sim.getInstruction() +
 						   "\nInstruction Pointer: " + String.format("%3s", Integer.toHexString(sim.getIP())).replace(' ', '0') +
-						   "\nRegisters: " + hexString(sim.getRegisterState(), 8).toUpperCase() +
-						   "\nRAM: " + hexString(sim.getRAMState(), 8).toUpperCase() +
-						   "\nData Stack: " + hexString(sim.getDataStack(), 8).toUpperCase() +
+						   "\nRegisters: " + hexString(sim.getRegisterState(), 16).toUpperCase() +
+						  // "\nRAM: " + hexString(sim.getRAMState(), 16).toUpperCase() +
+						   "\nData Stack: " + hexString(sim.getDataStack(), 16).toUpperCase() +
 						   "\nCall Stack: " + hexString(sim.getCallStack(), 10).toUpperCase() +
 						   "\nCarry Flag: " + sim.getCarryFlag() +
 						   "\nLoaded Locations: " + sim.getLoadedLocations() +

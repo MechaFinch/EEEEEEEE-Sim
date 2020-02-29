@@ -27,6 +27,9 @@ public class E8Assembler {
 			ramAddrLength = 2 * (int) Math.ceil((double) Integer.parseInt(exec.substring(2, 4), 16) / 8),
 			romAddrLength = 2 * (int) Math.ceil((double) Integer.parseInt(exec.substring(4, 6), 16) / 8);
 		
+		//System.out.println(exec);
+		//System.out.println(String.format("%s %s %s", dataLength, ramAddrLength, romAddrLength));
+		
 		/*
 		System.out.println(dataLength);
 		System.out.println(ramAddrLength);
@@ -37,6 +40,8 @@ public class E8Assembler {
 		// Sections will be sequential
 		// Start from 6 to skip header
 		for(int i = 6; i < exec.length();) {
+		    //System.out.println(exec.substring(i));
+		    
 			// Read section type
 			boolean isRAM = exec.substring(i, i + 2).equals("00");
 			i += 2;
@@ -78,7 +83,7 @@ public class E8Assembler {
 	 * @param source The source file as an array of lines
 	 * @return An array of strings in internal format
 	 */
-	private static String assemble(String[] source) {
+	public static String assemble(String[] source) {
 		String header = "08080A"; // default header
 		boolean foundHeader = false;
 		
@@ -174,7 +179,7 @@ public class E8Assembler {
 			
 			// Switch over opcodes
 			if(upper.startsWith("DB")) {			// Define Bytes
-				assembleDB(upper, dataBits, ramAddrBits, ramSections);
+				assembleDB(line, dataBits, ramAddrBits, ramSections);
 				addr--;
 			} else if(upper.startsWith("LD")) {		// Load
 				inst = assembleLD(upper);
@@ -655,7 +660,8 @@ public class E8Assembler {
 		int startIndex = indexOfNotWhitespaceComma(line, 2),
 			endIndex = indexOfWhitespaceComma(line, startIndex);
 		
-		int startAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits);
+		int startAddress = interpretInteger(line.substring(startIndex, endIndex), ramAddrBits),
+		    wordLengthHex = 2 * (int) Math.ceil((double) dataBits / 8);
 		
 		// Start the section
 		ProgramSection sec = new ProgramSection(startAddress, 0);
@@ -671,19 +677,19 @@ public class E8Assembler {
 				// Find closing " and interpret string
 				endIndex = line.indexOf('"', ++startIndex);
 				
-				String hex = interpretStringLiteral(line.substring(startIndex, endIndex));
-				sec.addData(hex, 2);
+				String hex = interpretStringLiteral(line.substring(startIndex, endIndex), wordLengthHex);
+				sec.addData(hex, wordLengthHex);
 				endIndex++;
 			} else if(firstChar == '\'') { // Character
 				if(line.charAt(startIndex + 2) != '\'') throw new IllegalArgumentException("Invalid character literal: " + line.substring(startIndex));
 				
-				sec.addData(toHex(line.charAt(startIndex + 1), 2), 2);
+				sec.addData(toHex(line.charAt(startIndex + 1), wordLengthHex), wordLengthHex);
 				endIndex = startIndex + 2;
 			} else if(Character.isDigit(firstChar)) { // Integer
 				// Find end
 				endIndex = indexOfWhitespaceComma(line, startIndex);
 				
-				sec.addData(toHex(interpretInteger(line.substring(startIndex, endIndex), dataBits), 2), 2);
+				sec.addData(toHex(interpretInteger(line.substring(startIndex, endIndex), dataBits), wordLengthHex), wordLengthHex);
 				endIndex++;
 			} else { // Error
 				throw new IllegalArgumentException("Invalid literal: " + line.substring(startIndex));
@@ -949,13 +955,14 @@ public class E8Assembler {
 	 * Converts a string literal to ASCII hexadecimal
 	 * 
 	 * @param literal
+	 * @param hexLength
 	 * @return ASCII hex of the string
 	 */
-	private static String interpretStringLiteral(String literal) {
+	private static String interpretStringLiteral(String literal, int hexLength) {
 		String s = "";
 		
 		for(int i = 0; i < literal.length(); i++) {
-			s += toHex(literal.charAt(i), 2);
+			s += toHex(literal.charAt(i), hexLength);
 		}
 		
 		return s;
