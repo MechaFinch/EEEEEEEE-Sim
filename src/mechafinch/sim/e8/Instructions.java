@@ -2,7 +2,8 @@ package mechafinch.sim.e8;
 
 public enum Instructions {
 	MOV_IMM, MOV_REG, MOV_INDEX, MOV_INDIR,
-	ADD, SUB, AND, OR, XOR, NOT, BSL, BSR,
+	ADD, SUB, MUL, DIV, MOD,
+	AND, OR, XOR, NOT, BSL, BSR,
 	JMP_DIR, JMP_IND, JSR_DIR, JSR_IND, RET,
 	BEQ, BLT, BGT, BZ, BNZ,
 	PUSH, POP, PEEK,
@@ -16,6 +17,10 @@ public enum Instructions {
 		
 		else if(bin.startsWith("010000")) return ADD;
 		else if(bin.startsWith("010001")) return SUB;
+		else if(bin.startsWith("11000")) return MUL;
+		else if(bin.startsWith("11001")) return DIV;
+		else if(bin.startsWith("11010")) return MOD;
+		
 		else if(bin.startsWith("010010")) return AND;
 		else if(bin.startsWith("010011")) return OR;
 		else if(bin.startsWith("010100")) return XOR;

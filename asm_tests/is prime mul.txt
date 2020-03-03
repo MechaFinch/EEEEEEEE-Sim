@@ -1,0 +1,85 @@
+$10100A ; bit info
+
+###
+x = 65,521
+
+for(i = 2; i * i < x; i++) {
+	if(x % i == 0) {
+		println("Not prime.");
+		end;
+	}
+}
+
+println("Prime!");
+end;
+###
+
+#define var_non_prime 2
+#define var_prime 13
+#define var_x 0
+#define var_i 1
+
+DB var_non_prime "Not prime.", 00
+DB var_prime "Prime!", 00
+
+; init large value
+; 65,521 = 0xFFD9
+LD B, 0xFF
+SHL A, B, 0x08
+LD B, 0xD9
+ADD A, A, B
+ST A, [var_x]
+
+; loop
+LD A, 2
+ST A, [var_i]
+
+loop:
+	; conditional
+	MUL A, A, A	; A = A * A
+	LD B, [var_x]
+	BLT A, B, loop_start
+	JMP break
+	
+	loop_start:
+		LD A, [var_x]
+		LD B, [var_i]
+		MOD A, A, B
+		BNZ A, loop_end
+		LD A, var_non_prime
+		JSR func_println
+		INT 0x00
+	
+	loop_end:
+	LD A, [var_i]
+	ADD A, A, 1
+	ST A, [var_i]
+	JMP loop
+
+break:
+LD A, var_prime
+JSR func_println
+INT 0x00
+
+; entry: A points to null-terminated string
+; exit: none
+; consumes B
+func_println:
+	LD B, [A]
+	BZ B, func_println_end
+	INT 0x0D
+	ADD A, A, 1
+	JMP func_println
+	
+	func_println_end:
+	LD B, 0x0A
+	INT 0x0D
+	RET
+
+
+
+
+
+
+
+

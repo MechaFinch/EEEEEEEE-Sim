@@ -213,6 +213,12 @@ public class E8Assembler {
 				inst = assemblePUSH(upper);
 			} else if(upper.startsWith("POP") || upper.startsWith("PEEK")) {
 				inst = assemblePOP(upper);
+			} else if(upper.startsWith("MUL")) {	// Multiply family
+				inst = assembleMUL(upper);
+			} else if(upper.startsWith("DIV")) {	// Divide family
+				inst = toHex(0b11001000_00000000 | interpretArithmeticArguments(upper.substring(3).trim()), 4);
+			} else if(upper.startsWith("MOD")) {	// Modulo family
+				inst = toHex(0b11010000_00000000 | interpretArithmeticArguments(upper.substring(3).trim()), 4);
 			} else { // unknown instruction, properly ignore
 				addr--;
 			}
@@ -263,6 +269,29 @@ public class E8Assembler {
 		
 		// Return this test thing so we don't break the simulator
 		//return "08080A0000050F000102030401000400003047410544013447";
+	}
+	
+	/**
+	 * Assembles multiply family lines
+	 * 
+	 * @param line
+	 * @return
+	 */
+	private static String assembleMUL(String line) {
+		int index = 0;
+		
+		// Get index from various variants
+		if(line.startsWith("MULH")) index = 4;
+		else index = 3;
+				
+		// Arguments
+		int instruction = interpretArithmeticArguments(line.substring(index).trim());
+		
+		// Opcode and such
+		if(index == 4) instruction |= 0b11000010_00000000;
+		else instruction |= 0b11000000_00000000;
+		
+		return toHex(instruction, 4);
 	}
 	
 	/**

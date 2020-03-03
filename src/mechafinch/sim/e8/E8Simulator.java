@@ -291,6 +291,66 @@ public class E8Simulator {
 				registers[dReg] = res & MAX_VALUE;
 				break;
 				
+			case MUL:
+				sReg = E8Util.getRegister(instruction,  10); // Register @ 4-5
+				dReg = E8Util.getRegister(instruction, 8);	 // Register @ 6-7
+				bVal = 0;
+				
+				// Standard B
+				if(instruction.charAt(7) == '0') {
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				// Apply operation
+				res = registers[sReg] * bVal;
+				
+				// High value? shift
+				if(instruction.charAt(6) == '1') res = res >> dataLength;
+				
+				// Mask and return
+				registers[dReg] = res & MAX_VALUE;
+				break;
+			
+			case DIV:
+				sReg = E8Util.getRegister(instruction,  10); // Register @ 4-5
+				dReg = E8Util.getRegister(instruction, 8);	 // Register @ 6-7
+				bVal = 0;
+				
+				// Standard B
+				if(instruction.charAt(7) == '0') {
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				// Apply operation
+				res = registers[sReg] / bVal;
+				
+				// Mask and return
+				registers[dReg] = res & MAX_VALUE;
+				break;
+				
+			case MOD:
+				sReg = E8Util.getRegister(instruction,  10); // Register @ 4-5
+				dReg = E8Util.getRegister(instruction, 8);	 // Register @ 6-7
+				bVal = 0;
+				
+				// Standard B
+				if(instruction.charAt(7) == '0') {
+					bVal = registers[E8Util.getRegister(instruction, 14)];
+				} else {
+					bVal = Integer.parseInt(instruction.substring(12), 2);
+				}
+				
+				// Apply operation
+				res = registers[sReg] % bVal;
+				
+				// Mask and return
+				registers[dReg] = res & MAX_VALUE;
+				break;
+				
 			case AND:
 				sReg = E8Util.getRegister(instruction, 10);	//Reg A @ 4-5
 				dReg = E8Util.getRegister(instruction, 8);	//Dest @ 6-7
