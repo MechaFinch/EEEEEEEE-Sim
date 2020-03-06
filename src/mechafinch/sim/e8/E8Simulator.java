@@ -19,26 +19,26 @@ public class E8Simulator {
 	/*
 	 * VM Objects
 	 */
-	private int[] RAM,		//RAM
-				  registers;//Registers
-	private int[] ROM;		//ROM
+	protected int[] RAM,		//RAM
+					registers;	//Registers
+	protected int[] ROM;		//ROM
 	
-	private ArrayDeque<Integer> callStack;
-	private ArrayDeque<Integer> dataStack;
+	protected ArrayDeque<Integer> callStack;
+	protected ArrayDeque<Integer> dataStack;
 	
-	private String instruction;		//Current instruction (binary string)
-	private Instructions iType;		//The type of the current instruction
-	private int instructionPointer,	//The instruction pointer
-				dataLength;			//Length of data words
-	private boolean cFlag = false;	//The carry flag
+	protected String instruction;		//Current instruction (binary string)
+	protected Instructions iType;		//The type of the current instruction
+	protected int instructionPointer,	//The instruction pointer
+				  dataLength;			//Length of data words
+	protected boolean cFlag = false;	//The carry flag
 	
-	private BufferedReader inputStream;		//Inputstream used by interrupts
-	private BufferedWriter outputStream;	//Outputstream used by interrupts
+	protected BufferedReader inputStream;	//Inputstream used by interrupts
+	protected BufferedWriter outputStream;	//Outputstream used by interrupts
 	
-	private int MAX_VALUE,			//Maximum value based on number of bits
-				ZERO_MASK,			//Bitmask for not complementing during XOR
-				ADDRESS_MASK,		//Bitmask for the maximum value of a ROM address
-				SIGNEXTEND_MASK;	//Bitmask for sign-extension to 32 bit
+	protected int MAX_VALUE,		//Maximum value based on number of bits
+				  ZERO_MASK,		//Bitmask for not complementing during XOR
+				  ADDRESS_MASK,		//Bitmask for the maximum value of a ROM address
+				  SIGNEXTEND_MASK;	//Bitmask for sign-extension to 32 bit
 	
 	/*
 	 * Public Constructors
