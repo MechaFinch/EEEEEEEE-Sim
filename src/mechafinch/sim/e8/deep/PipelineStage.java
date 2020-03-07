@@ -7,7 +7,9 @@ package mechafinch.sim.e8.deep;
  */
 public abstract class PipelineStage {
 	
-	private PipelinedSimulator sim;
+	protected PipelinedSimulator sim;
+	
+	protected int timeBubbled;
 	
 	/**
 	 * Creates a pipeline stage as a part of the given PipelinedSimulator
@@ -16,11 +18,24 @@ public abstract class PipelineStage {
 	 */
 	public PipelineStage(PipelinedSimulator sim) {
 		this.sim = sim;
+		
+		timeBubbled = 0;
 	}
 	
 	/**
-	 * Runs the stage, returning how many cycles it took
-	 * @return The number of cycles used
+	 * Runs the stage
 	 */
-	public abstract int execute();
+	public abstract void execute();
+	
+	/**
+	 * Adds time for this stage to be bubbled
+	 * 
+	 * @param cycles Number of cycles to wait for
+	 */
+	public abstract void addBubbles(int cycles);
+	
+	/**
+	 * Passes information to the next stage of the pipeline
+	 */
+	public abstract void passData();
 }

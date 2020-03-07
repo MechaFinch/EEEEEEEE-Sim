@@ -1,8 +1,10 @@
 package mechafinch.sim.e8.deep;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import mechafinch.sim.e8.E8Simulator;
+import mechafinch.sim.e8.deep.stages.*;
 
 /**
  * An E8Simulator that simulates pipelining
@@ -16,6 +18,12 @@ public class PipelinedSimulator extends E8Simulator {
 	
 	private int cyclesElapsed;
 	
+	protected FetchStage fetchStage;
+	protected DecodeStage decodeStage;
+	protected ExecutionStage executionStage;
+	protected AccessStage accessStage;
+	protected WritebackStage writebackStage;
+	
 	/**
 	 * Creates a pipelined simulator with the given groupings in the format [group index]{start index 0-4, end index 0-4 inclusive}
 	 * groupings of {{0, 4}} would be completely un-pipelined
@@ -23,10 +31,18 @@ public class PipelinedSimulator extends E8Simulator {
 	 * @param groupings
 	 */
 	public PipelinedSimulator(int[] ram, int[] rom, int[][] groupings) {
+		// Use parameters
 		super(ram, rom, 16);
 		this.groupings = groupings;
 		
+		// Init other stuff
 		cyclesElapsed = 0;
+		
+		fetchStage = new FetchStage(this, decodeStage);
+		decodeStage = new DecodeStage(this);
+		executionStage = new ExecutionStage(this);
+		accessStage = new AccessStage(this);
+		writebackStage = new WritebackStage(this);
 		
 		// Validate groups
 		ArrayList<Integer> usedStages = new ArrayList<>();
@@ -58,4 +74,26 @@ public class PipelinedSimulator extends E8Simulator {
 			{4, 4}
 		});
 	}
+	
+	@Override
+	public boolean step() throws IOException {
+		/*
+		 * <<Planning>>
+		 * Loop over each stage, running it, and tracking cycles according to groups (this may become unnecessary and group lengths can be tracked beforehand instead)
+		 * Take the longest cycle count and add it to the elapsed cycles
+		 * Check that we can continue (exception flag, interrupts)
+		 * If we can't stop execution and such
+		 * Transfer information between stages
+		 */
+		
+		return true;
+	}
 }
+
+
+
+
+
+
+
+

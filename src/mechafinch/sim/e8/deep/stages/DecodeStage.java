@@ -1,5 +1,6 @@
 package mechafinch.sim.e8.deep.stages;
 
+import mechafinch.sim.e8.Instructions;
 import mechafinch.sim.e8.deep.PipelineStage;
 import mechafinch.sim.e8.deep.PipelinedSimulator;
 
@@ -11,15 +12,39 @@ import mechafinch.sim.e8.deep.PipelinedSimulator;
  */
 public class DecodeStage extends PipelineStage {
 	
+	private String instructionBinary;
+	
+	private Instructions instructionType;
+	
 	public DecodeStage(PipelinedSimulator sim) {
 		super(sim);
 		// TODO Auto-generated constructor stub
 	}
 	
 	@Override
-	public int execute() {
+	public void execute() {
 		// TODO Auto-generated method stub
-		return 0;
+	}
+
+	@Override
+	public void addBubbles(int cycles) {
+		timeBubbled += cycles;
+	}
+	
+	/**
+	 * Pass the binary and enumerated type of the instruction
+	 * 
+	 * @param inst Instruction binary string
+	 * @param type Enumberated instruction type
+	 */
+	public void receiveData(String inst, Instructions type) {
+		
+	}
+
+	@Override
+	public void passData() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

@@ -17,9 +17,17 @@ public class ExecutionStage extends PipelineStage {
 	}
 	
 	@Override
-	public int execute() {
+	public void execute() {
 		// TODO Auto-generated method stub
-		return 0;
+	}
+
+	@Override
+	public void addBubbles(int cycles) {}
+
+	@Override
+	public void passData() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }
