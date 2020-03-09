@@ -16,13 +16,13 @@ public class TestUtil {
 	 * @param sim The isntance to dump
 	 */
 	public static void dumpState(E8Simulator sim) {
-		System.out.println("\nInstruction: " + sim.getInstruction() +
-						   "\nInstruction Pointer: " + String.format("%3s", Integer.toHexString(sim.getIP())).replace(' ', '0') +
-						   "\nRegisters: " + hexString(sim.getRegisterState(), 16).toUpperCase() +
+		System.out.println("\nInstruction: " + sim.instruction +
+						   "\nInstruction Pointer: " + String.format("%3s", Integer.toHexString(sim.instructionPointer)).replace(' ', '0') +
+						   "\nRegisters: " + hexString(sim.registers, sim.dataLength).toUpperCase() +
 						  // "\nRAM: " + hexString(sim.getRAMState(), 16).toUpperCase() +
-						   "\nData Stack: " + hexString(sim.getDataStack(), 16).toUpperCase() +
-						   "\nCall Stack: " + hexString(sim.getCallStack(), 10).toUpperCase() +
-						   "\nCarry Flag: " + sim.getCarryFlag() +
+						   "\nData Stack: " + hexString(sim.dataStack, sim.dataLength).toUpperCase() +
+						   "\nCall Stack: " + hexString(sim.callStack, 10).toUpperCase() +
+						   "\nCarry Flag: " + sim.cFlag +
 						   "\nLoaded Locations: " + sim.getLoadedLocations() +
 						   "\nStored Location: " + sim.getStoredLocation() +
 						   "");

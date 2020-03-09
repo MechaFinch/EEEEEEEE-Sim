@@ -11,6 +11,8 @@ public abstract class PipelineStage {
 	
 	protected int timeBubbled;
 	
+	protected boolean isBubbled;
+	
 	/**
 	 * Creates a pipeline stage as a part of the given PipelinedSimulator
 	 * 
@@ -20,6 +22,7 @@ public abstract class PipelineStage {
 		this.sim = sim;
 		
 		timeBubbled = 0;
+		isBubbled = false;
 	}
 	
 	/**

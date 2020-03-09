@@ -24,11 +24,13 @@ public class LocalTest {
 		
 		E8Simulator e8 = new E8Simulator(RAM, ROM, regs, 8, new ArrayDeque<Integer>(), new ArrayDeque<Integer>(), 0x3FF, Integer.toString(0xA8B2, 2), false, System.in, System.out);//new E8Simulator(RAM, ROM, regs, 0x3FF, Integer.toString(0xA8B2, 2));
 		
+		/*
 		System.out.println("Instruction: " + e8.getInstruction() +
 						 "\nInstruction Pointer: " + e8.getIP() +
 						 "\nRAM: " + e8.getRAMState().length + " " + TestUtil.hexString(e8.getRAMState(), 8) + //show length too
 						 "\nROM: " + e8.getROM().length + " " + TestUtil.hexString(e8.getROM(), 10) +
 						 "\nRegisters: " + e8.getRegisterState().length + " " + TestUtil.hexString(e8.getRegisterState(), 8) +
 						 "\nCarry: " + e8.getCarryFlag());
+		 */
 	}
 }

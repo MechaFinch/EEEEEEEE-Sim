@@ -19,26 +19,26 @@ public class E8Simulator {
 	/*
 	 * VM Objects
 	 */
-	protected int[] RAM,		//RAM
-					registers;	//Registers
-	protected int[] ROM;		//ROM
+	public int[] RAM,		//RAM
+				 registers;	//Registers
+	public int[] ROM;		//ROM
 	
-	protected ArrayDeque<Integer> callStack;
-	protected ArrayDeque<Integer> dataStack;
+	public ArrayDeque<Integer> callStack;
+	public ArrayDeque<Integer> dataStack;
 	
-	protected String instruction;		//Current instruction (binary string)
-	protected Instructions iType;		//The type of the current instruction
-	protected int instructionPointer,	//The instruction pointer
-				  dataLength;			//Length of data words
-	protected boolean cFlag = false;	//The carry flag
+	public String instruction;		//Current instruction (binary string)
+	public Instructions iType;		//The type of the current instruction
+	public int instructionPointer,	//The instruction pointer
+			   dataLength;			//Length of data words
+	public boolean cFlag = false;	//The carry flag
 	
-	protected BufferedReader inputStream;	//Inputstream used by interrupts
-	protected BufferedWriter outputStream;	//Outputstream used by interrupts
+	public BufferedReader inputStream;	//Inputstream used by interrupts
+	public BufferedWriter outputStream;	//Outputstream used by interrupts
 	
-	protected int MAX_VALUE,		//Maximum value based on number of bits
-				  ZERO_MASK,		//Bitmask for not complementing during XOR
-				  ADDRESS_MASK,		//Bitmask for the maximum value of a ROM address
-				  SIGNEXTEND_MASK;	//Bitmask for sign-extension to 32 bit
+	public int MAX_VALUE,		//Maximum value based on number of bits
+			   ZERO_MASK,		//Bitmask for not complementing during XOR
+			   ADDRESS_MASK,		//Bitmask for the maximum value of a ROM address
+			   SIGNEXTEND_MASK;	//Bitmask for sign-extension to 32 bit
 	
 	/*
 	 * Public Constructors
@@ -188,18 +188,6 @@ public class E8Simulator {
 	public E8Simulator(int[] nROM) {
 		this(new int[256], nROM);
 	}
-	
-	/*
-	 * UI Getters
-	 */
-	public int[] getRAMState() { return RAM.clone(); }
-	public int[] getRegisterState() { return registers.clone(); }
-	public int[] getROM() { return ROM.clone(); }
-	public ArrayDeque<Integer> getCallStack() { return callStack.clone(); }
-	public ArrayDeque<Integer> getDataStack() { return dataStack.clone(); } 
-	public int getIP() { return instructionPointer; }
-	public String getInstruction() { return instruction; }
-	public boolean getCarryFlag() { return cFlag; }
 	
 	/**
 	 * Steps through the simulation

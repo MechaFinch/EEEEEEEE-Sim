@@ -18,7 +18,9 @@ public class DecodeStage extends PipelineStage {
 	
 	public DecodeStage(PipelinedSimulator sim) {
 		super(sim);
-		// TODO Auto-generated constructor stub
+		
+		instructionBinary = "";
+		instructionType = Instructions.NOP;
 	}
 	
 	@Override
@@ -35,10 +37,11 @@ public class DecodeStage extends PipelineStage {
 	 * Pass the binary and enumerated type of the instruction
 	 * 
 	 * @param inst Instruction binary string
-	 * @param type Enumberated instruction type
+	 * @param type Enumerated instruction type
 	 */
 	public void receiveData(String inst, Instructions type) {
-		
+		instructionBinary = inst;
+		instructionType = type;
 	}
 
 	@Override
