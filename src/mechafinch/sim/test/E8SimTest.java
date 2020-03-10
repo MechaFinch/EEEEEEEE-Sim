@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import mechafinch.asm.E8Assembler;
 import mechafinch.sim.e8.E8Simulator;
+import mechafinch.sim.e8.deep.PipelinedSimulator;
 
 /**
  * A place to test the simulator in a standard environment
@@ -65,7 +66,10 @@ public class E8SimTest {
 			rom[i / 4] = Integer.parseInt(romString.substring(i, i + 4), 16);
 		}
 		
-		E8Simulator testSim = new E8Simulator(ram, rom, 16);
+		//E8Simulator testSim = new E8Simulator(ram, rom, 16);
+		
+		// Pipelined simulator without pipelining so we don't have do deal with it
+		PipelinedSimulator testSim = new PipelinedSimulator(ram, rom, new int[][]{{0, 4}});
 		
 		//Execute order 66
 		int i = 0;

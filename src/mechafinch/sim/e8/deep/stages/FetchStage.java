@@ -15,8 +15,6 @@ public class FetchStage extends PipelineStage {
 	
 	private int instructionPointer;
 	
-	private String instruction;
-	
 	/**
 	 * Creates a Fetch Stage
 	 * 
@@ -27,7 +25,6 @@ public class FetchStage extends PipelineStage {
 		super(sim);
 		this.decode = decode;
 		
-		instruction = "";
 		instructionPointer = 0;
 	}
 	
@@ -35,7 +32,7 @@ public class FetchStage extends PipelineStage {
 	public void execute() {
 		// We can do things without caring for bubbles but we can't give that data
 		// Nab that instruction and store it until we pass our data
-		instruction = String.format("%16s", Integer.toBinaryString(sim.ROM[instructionPointer])).replace(' ', '0');
+		instructionBinary = String.format("%16s", Integer.toBinaryString(sim.ROM[instructionPointer])).replace(' ', '0');
 	}
 
 	@Override
@@ -57,7 +54,7 @@ public class FetchStage extends PipelineStage {
 		}
 		
 		// Instruction type is determined here btw
-		decode.receiveData(instruction, Instructions.getEnumeratedInstruction(instruction));
+		decode.receiveData(instructionBinary, Instructions.getEnumeratedInstruction(instructionBinary));
 	}
 	
 	/**

@@ -1,5 +1,7 @@
 package mechafinch.sim.e8.deep;
 
+import mechafinch.sim.e8.Instructions;
+
 /**
  * A simulated stage in the pipeline
  * 
@@ -11,7 +13,12 @@ public abstract class PipelineStage {
 	
 	protected int timeBubbled;
 	
-	protected boolean isBubbled;
+	protected boolean isBubbled,
+					  hasData;
+	
+	protected String instructionBinary;
+	
+	protected Instructions instructionType;
 	
 	/**
 	 * Creates a pipeline stage as a part of the given PipelinedSimulator
@@ -23,6 +30,9 @@ public abstract class PipelineStage {
 		
 		timeBubbled = 0;
 		isBubbled = false;
+		hasData = false;
+		instructionBinary = "";
+		instructionType = Instructions.NOP;
 	}
 	
 	/**

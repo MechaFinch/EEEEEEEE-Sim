@@ -88,6 +88,18 @@ public class PipelinedSimulator extends E8Simulator {
 		
 		return true;
 	}
+	
+	@Override
+	public String getLoadedLocations() {
+		// TODO: implement
+		return "";
+	}
+	
+	@Override
+	public String getStoredLocation() {
+		// TODO: implement
+		return "";
+	}
 }
 
 

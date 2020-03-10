@@ -12,15 +12,8 @@ import mechafinch.sim.e8.deep.PipelinedSimulator;
  */
 public class DecodeStage extends PipelineStage {
 	
-	private String instructionBinary;
-	
-	private Instructions instructionType;
-	
 	public DecodeStage(PipelinedSimulator sim) {
 		super(sim);
-		
-		instructionBinary = "";
-		instructionType = Instructions.NOP;
 	}
 	
 	@Override
