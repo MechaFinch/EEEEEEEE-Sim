@@ -25,9 +25,9 @@ DB var_prime "Prime!", 00
 ; init large value
 ; 65,521 = 0xFFD9
 LD B, 0xFF
+LD C, 0xD9
 SHL A, B, 0x08
-LD B, 0xD9
-ADD A, A, B
+ADD A, A, C
 ST A, [var_x]
 
 ; loop

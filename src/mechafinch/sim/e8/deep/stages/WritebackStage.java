@@ -21,9 +21,6 @@ public class WritebackStage extends PipelineStage {
 	}
 
 	@Override
-	public void addBubbles(int cycles) {}
-
-	@Override
 	public void passData() {
 		// TODO Auto-generated method stub
 		

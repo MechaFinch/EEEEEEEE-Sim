@@ -26,9 +26,9 @@ DB var_prime "Prime!", 00
 ; init
 ; 65,521 = 0xFFD9
 LD B, 0xFF
+LD C, 0xD9
 SHL A, B, 0x08
-LD B, 0xD9
-ADD A, A, B
+ADD A, A, C
 ST A, [var_x]
 
 ; loop
@@ -69,8 +69,8 @@ func_mod_end:
 	RET
 	
 func_square: ; a,b,c consumed ret a
-	LD B, A
 	LD C, A
+	LD B, A
 	LD A, 0
 	func_square_loop:
 		BZ C, func_square_end

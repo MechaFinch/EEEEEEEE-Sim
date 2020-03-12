@@ -11,10 +11,7 @@ public abstract class PipelineStage {
 	
 	protected PipelinedSimulator sim;
 	
-	protected int timeBubbled;
-	
-	protected boolean isBubbled,
-					  hasData;
+	protected boolean hasData;
 	
 	protected String instructionBinary;
 	
@@ -28,8 +25,6 @@ public abstract class PipelineStage {
 	public PipelineStage(PipelinedSimulator sim) {
 		this.sim = sim;
 		
-		timeBubbled = 0;
-		isBubbled = false;
 		hasData = false;
 		instructionBinary = "";
 		instructionType = Instructions.NOP;
@@ -40,15 +35,16 @@ public abstract class PipelineStage {
 	 */
 	public abstract void execute();
 	
-	/**
-	 * Adds time for this stage to be bubbled
-	 * 
-	 * @param cycles Number of cycles to wait for
-	 */
-	public abstract void addBubbles(int cycles);
 	
 	/**
 	 * Passes information to the next stage of the pipeline
 	 */
 	public abstract void passData();
+	
+	/**
+	 * Specifically receives no data
+	 */
+	public void receiveNoData() {
+		hasData = false;
+	}
 }

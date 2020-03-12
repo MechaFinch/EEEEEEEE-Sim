@@ -13,7 +13,7 @@ public class FetchStage extends PipelineStage {
 	
 	private DecodeStage decode;
 	
-	private int instructionPointer;
+	private int timeBubbled;
 	
 	/**
 	 * Creates a Fetch Stage
@@ -25,45 +25,38 @@ public class FetchStage extends PipelineStage {
 		super(sim);
 		this.decode = decode;
 		
-		instructionPointer = 0;
+		timeBubbled = 0;
 	}
 	
 	@Override
 	public void execute() {
 		// We can do things without caring for bubbles but we can't give that data
 		// Nab that instruction and store it until we pass our data
-		instructionBinary = String.format("%16s", Integer.toBinaryString(sim.ROM[instructionPointer])).replace(' ', '0');
+		instructionBinary = String.format("%16s", Integer.toBinaryString(sim.ROM[sim.instructionPointer])).replace(' ', '0');
 	}
-
-	@Override
+	
+	/**
+	 * Bubbles the origin of the pipeline for some number of cycles
+	 * 
+	 * @param cycles
+	 */
 	public void addBubbles(int cycles) {
 		timeBubbled += cycles;
-		isBubbled = true;
 	}
 
 	@Override
 	public void passData() {
 		// If we're bubbled, we have no data
-		if(isBubbled) {
+		if(timeBubbled > 0) {
 			decode.receiveData("", Instructions.NOP);
-			
 			timeBubbled--;
-			if(timeBubbled == 0) {
-				isBubbled = false;
-			}
 		}
 		
 		// Instruction type is determined here btw
 		decode.receiveData(instructionBinary, Instructions.getEnumeratedInstruction(instructionBinary));
-	}
-	
-	/**
-	 * Pass the instruction pointer
-	 * 
-	 * @param instructionPointer
-	 */
-	public void receiveData(int instructionPointer) {
-		this.instructionPointer = instructionPointer;
+		
+		// Increment IP if needed, only done once data from the old ip was passed and necessity determined
+		if(sim.incrementIP) sim.instructionPointer++;
 	}
 	
 }

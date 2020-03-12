@@ -14,15 +14,24 @@ import mechafinch.sim.e8.deep.stages.*;
  */
 public class PipelinedSimulator extends E8Simulator {
 	
-	private int[][] groupings;
+    // Grouped stages
+	public int[][] groupings;
 	
-	private int cyclesElapsed;
+	private int cyclesElapsed,
+				cyclesPer;
 	
-	protected FetchStage fetchStage;
-	protected DecodeStage decodeStage;
-	protected ExecutionStage executionStage;
-	protected AccessStage accessStage;
-	protected WritebackStage writebackStage;
+	// Interface stuff
+	public boolean incrementIP;
+	
+	// The properly typed stages
+	private FetchStage fetchStage;
+	private DecodeStage decodeStage;
+	private ExecutionStage executionStage;
+	private AccessStage accessStage;
+	private WritebackStage writebackStage;
+	
+	// Generic list containing these stages
+	private ArrayList<PipelineStage> stages;
 	
 	/**
 	 * Creates a pipelined simulator with the given groupings in the format [group index]{start index 0-4, end index 0-4 inclusive}
@@ -37,22 +46,41 @@ public class PipelinedSimulator extends E8Simulator {
 		
 		// Init other stuff
 		cyclesElapsed = 0;
+		cyclesPer = 0;
+		incrementIP = true;
 		
+		// Create the stages
 		fetchStage = new FetchStage(this, decodeStage);
-		decodeStage = new DecodeStage(this);
+		decodeStage = new DecodeStage(this, executionStage);
 		executionStage = new ExecutionStage(this);
 		accessStage = new AccessStage(this);
 		writebackStage = new WritebackStage(this);
 		
+		// Place stages in generic list
+		stages = new ArrayList<>();
+		stages.add(fetchStage);
+		stages.add(decodeStage);
+		stages.add(executionStage);
+		stages.add(accessStage);
+		stages.add(writebackStage);
+		
 		// Validate groups
 		ArrayList<Integer> usedStages = new ArrayList<>();
 		
-		for(int i = 0; i < groupings.length; i++) {
+		for(int i = 0, pe = -1; i < groupings.length; i++) {
 			int start = groupings[i][0],
-				end = groupings[i][1];
+				end = groupings[i][1],
+				len = end - start;
 			
-			// Make sure things are in order
-			if(start < end) throw new IllegalArgumentException(String.format("Invalid group: Start (%s) must be less than or equal to end (%s)", start, end));
+			// Set cyclesPer to the longest stage's length
+			if(len > cyclesPer) cyclesPer = len;
+			
+			// Make sure groups are in order
+			if(start <= pe) throw new IllegalArgumentException("Groups must be in order and without overlap");
+			pe = end;
+			
+			// Make sure groups make sense
+			if(start > end) throw new IllegalArgumentException(String.format("Invalid group: Start (%s) must be less than or equal to end (%s)", start, end));
 			
 			// Make sure there aren't duplicates
 			for(int j = start; j <= end; j++) {
@@ -78,26 +106,44 @@ public class PipelinedSimulator extends E8Simulator {
 	@Override
 	public boolean step() throws IOException {
 		/*
-		 * <<Planning>>
-		 * Loop over each stage, running it, and tracking cycles according to groups (this may become unnecessary and group lengths can be tracked beforehand instead)
-		 * Take the longest cycle count and add it to the elapsed cycles
+		 * Loop over each stage, running it
 		 * Check that we can continue (exception flag, interrupts)
 		 * If we can't stop execution and such
 		 * Transfer information between stages
 		 */
+		
+		// Loop over groups (group index) and execute them
+		for(int gri = 0; gri < groupings.length; gri++) {
+			// Loop over each stage of the group (stage index)
+			for(int si = groupings[gri][0]; si <= groupings[gri][1]; si++) {
+				// Run the stage
+				stages.get(si).execute();
+				
+				// If there are subsequent stages in the group, pass the data here
+				if(si < groupings[gri][1]) stages.get(si).passData();
+			}
+		}
+		
+		// Can we continue?
+		// TODO: can continue flag
+		
+		// Pass data between groups
+		for(int gri = 0; gri < groupings.length; gri++) {
+			stages.get(groupings[gri][1]).passData();
+		}
 		
 		return true;
 	}
 	
 	@Override
 	public String getLoadedLocations() {
-		// TODO: implement
+		// TODO: implement, maybe
 		return "";
 	}
 	
 	@Override
 	public String getStoredLocation() {
-		// TODO: implement
+		// TODO: implement, maybe
 		return "";
 	}
 }

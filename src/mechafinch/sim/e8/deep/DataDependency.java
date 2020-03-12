@@ -5,95 +5,103 @@ import mechafinch.sim.e8.Instructions;
 
 /**
  * Represents a dependency in the pipeline
+ * If a piece of data (register, memory location, etc) is dependent, it mustn't be written to but may be able to be read from
  * 
  * @author Alex Pickering
  */
 public class DataDependency {
 	
+    // Describes what is dependent
 	private String descriptor;
+	
+	// Tracks which group the dependency is in
+	private int location;
 	
 	/**
 	 * Creates a dependency with the given descriptor
+	 * A dependency represents a location that will be written to
 	 * <p> Format:
-	 * <p> Character indicating if it is a register or memory location, then the register number or the address, or 'all' if the read/write is indirect
+	 * <p> Character indicating if it is a register or memory location, then the register number or the address, or 'all' if the write is indirect
 	 * 
 	 * @param descriptor
+	 * @param readAllowed true if the location can be read from
+	 * @param location the index of the stage group to start in
 	 */
-	public DataDependency(String descriptor) {
+	public DataDependency(String descriptor, int location) {
 		this.descriptor = descriptor;
+		this.location = location;
 	}
 	
 	/**
-	 * Determines if an instruction is dependent on a later state
+	 * Updates the location of the depenency
 	 * 
-	 * @param bin The binary string of the instruction
-	 * @param type The enumeration of the instruction
-	 * @return If this instruction is dependent
+	 * @param groups Array of groups
+	 * @return true if the dependency has expired
 	 */
-	public boolean isDependent(String bin, Instructions type) {
-		boolean isRegister = descriptor.charAt(0) == 'r',
-				all = descriptor.substring(1).equals("all");
-		int reg = Integer.parseInt("" + descriptor.charAt(1)),
-			addr = all ? 0 : Integer.parseInt(descriptor.substring(1));
+	public boolean updateLocation(int[][] groups) {
+		location++;
+		
+		return location >= groups.length;
+	}
+	
+	/**
+	 * Determines if the given instruction is allowed to read by this dependency
+	 * "Will this dependency modify what the instruction will read?"
+	 * We only need to deal with Read After Write data hazards thanks to the pipeline structure
+	 * 
+	 * @param bin Instrucion's binary string
+	 * @param type Enumerated instruction
+	 * @return true if the instruction isn't allowed to read, false if it can
+	 */
+	public boolean cannotRead(String bin, Instructions type) {
+		boolean isRegister = descriptor.charAt(0) == 'r',						// Is the dependency a register
+				all = descriptor.substring(1).equals("all");					// Is this all of memory or a known location
+		int reg = isRegister ? Integer.parseInt("" + descriptor.charAt(1)) : 0,	// Which register is it?
+			addr = all ? 0 : Integer.parseInt(descriptor.substring(1));			// What address is it at?
 		
 		switch(type) {
-			case MOV_IMM:
-			case JMP_IND:
-			case JSR_IND:
-				if(isRegister) return reg == E8Util.getRegister(bin, 6); // dest register
-				return false;
-		
 			case MOV_REG:
-			case BEQ:
-			case BLT:
-			case BGT:
-				if(isRegister) return reg == E8Util.getRegister(bin, 6) || // Both source and dest matter
-									  reg == E8Util.getRegister(bin, 8);
-				return false;
-				
-			case MOV_INDEX:
-				if(isRegister) return reg == E8Util.getRegister(bin, 6); // s/d reg
-				else if(all) return true;												  // is addr equal?
-				return addr == Integer.parseInt(bin.substring(8), 2);
-				
-			case MOV_INDIR:
-				if(isRegister) return reg == E8Util.getRegister(bin, 6) || // Is s/d reg dependant
-									  reg == E8Util.getRegister(bin, 8);
-				return true;															// Don't deal with registers, always dependent on any memory
-				
-			// Arithmetic argument patters are mostly the same
-			case ADD:
-			case SUB:
-			case MUL:
-			case DIV:
-			case MOD:
-			case AND:
-			case OR:
-			case XOR:
-			case BSL:
-			case BSR:
-				if(isRegister) return reg == E8Util.getRegister(bin, 8) ||  // dest
-									  reg == E8Util.getRegister(bin, 10) || // src a
-									  (bin.charAt(7) == '0' && reg == E8Util.getRegister(bin, 14)); // src b if not immediate
-				return false;
-				
-			case NOT:
-				if(isRegister) return reg == E8Util.getRegister(bin, 8) || // no immediates in this one
-									  reg == E8Util.getRegister(bin, 10);
-				
 			case BZ:
 			case BNZ:
-			case POP:
-			case PEEK:
-				if(isRegister) return reg == E8Util.getRegister(bin, 8);
-				return false;
+				return isRegister && reg == E8Util.getRegister(bin, 8);	// Will we read from the register
+			
+			case MOV_INDEX:
+				if(bin.charAt(5) == '0') {	// Reads from specific address 
+					return !isRegister && (all || addr == Integer.parseInt(bin.substring(8), 2));
+				} else {					// Reads from register
+					return isRegister && reg == E8Util.getRegister(bin, 6);
+				}
+				
+			case MOV_INDIR:
+				if(bin.charAt(5) == '0') {	// Read from any address and a register
+					return !isRegister || reg == E8Util.getRegister(bin, 8);
+				} else {					// Read from 2 registers
+					return isRegister && (reg == E8Util.getRegister(bin, 6) || reg == E8Util.getRegister(bin, 8));
+				}
+				
+			// Most A types have the same reads
+			// Read from 1 or 2 registers
+			case ADD: case SUB: case MUL: case DIV: case MOD:
+			case AND: case OR: case XOR: case BSL: case BSR:
+				if(bin.charAt(7) == '0') {	// 2 registers
+					return isRegister && (reg == E8Util.getRegister(bin, 10) || reg == E8Util.getRegister(bin, 14));
+				} else {					// 1 register
+					return isRegister && reg == E8Util.getRegister(bin, 10);
+				}
+				
+			case NOT:
+			case JMP_IND:
+			case JSR_IND:
+				return isRegister && reg == E8Util.getRegister(bin, 10);
+				
+			// Branch instructions also share a lot
+			case BEQ: case BLT: case BGT:
+				return isRegister && (reg == E8Util.getRegister(bin, 6) || reg == E8Util.getRegister(bin, 8));
 				
 			case PUSH:
-			case INT:
-				if(isRegister) return bin.charAt(7) == '0' && reg == E8Util.getRegister(bin, 14);
-				return false;
-							
-			default: // Any isntruction that cannot be dependent is a default case
+				return bin.charAt(7) == '0' && isRegister && reg == E8Util.getRegister(bin, 14);
+				
+			default:
 				return false;
 		}
 	}

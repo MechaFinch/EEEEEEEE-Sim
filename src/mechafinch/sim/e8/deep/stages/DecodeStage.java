@@ -1,6 +1,9 @@
 package mechafinch.sim.e8.deep.stages;
 
+import java.util.ArrayList;
+
 import mechafinch.sim.e8.Instructions;
+import mechafinch.sim.e8.deep.DataDependency;
 import mechafinch.sim.e8.deep.PipelineStage;
 import mechafinch.sim.e8.deep.PipelinedSimulator;
 
@@ -12,18 +15,33 @@ import mechafinch.sim.e8.deep.PipelinedSimulator;
  */
 public class DecodeStage extends PipelineStage {
 	
-	public DecodeStage(PipelinedSimulator sim) {
+	private ExecutionStage exec;
+	
+	private ArrayList<DataDependency> dependencies;
+	
+	public DecodeStage(PipelinedSimulator sim, ExecutionStage exec) {
 		super(sim);
+		
+		this.exec = exec;
+		dependencies = new ArrayList<>();
 	}
 	
 	@Override
 	public void execute() {
-		// TODO Auto-generated method stub
-	}
-
-	@Override
-	public void addBubbles(int cycles) {
-		timeBubbled += cycles;
+		// Decrement dependency timers and remove them if they expire
+		
+		// No data no other changes
+		if(!hasData) return;
+		
+		// Note: change sim.incrementIP if needed
+		// Note: interrupts clear the pipeline before running, and don't use the rest of it
+		
+		
+		/*
+		 * Look for dependencies that prevent this instruction from continuing
+		 * If there is a dependency, bubble the Fetch Stage which will implicitly bubble subsequent stages (including this one) until it has passed
+		 * Dependencies have a time limit
+		 */
 	}
 	
 	/**
@@ -39,7 +57,7 @@ public class DecodeStage extends PipelineStage {
 
 	@Override
 	public void passData() {
-		// TODO Auto-generated method stub
+		if(!hasData) exec.receiveNoData();
 		
 	}
 	
