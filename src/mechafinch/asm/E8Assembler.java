@@ -304,7 +304,7 @@ public class E8Assembler {
 		String str = line.substring(indexOfNotWhitespaceComma(line, line.startsWith("PEEK") ? 4 : 3)).trim();
 		int instruction = 0b10100010_00000000;
 		
-		if(line.startsWith("POP")) instruction |= 0b00000001_00000000;
+		if(line.startsWith("PEEK")) instruction |= 0b00000001_00000000;
 		
 		instruction |= (interpretRegister(str.charAt(0)) << 6);
 		return toHex(instruction, 4);
@@ -371,7 +371,12 @@ public class E8Assembler {
 		if(labels.containsKey(str)) {
 			offset = labels.get(str) - location;
 			
-			if(offset < 0) instruction |= 0b00000100_00000000;
+			if(offset < 0) { // Absolute value of offset, move sign to proper place
+				instruction |= 0b00000100_00000000;
+				offset = -offset;
+			}
+			
+			offset &= 0x3F; // make sure it's 6 bits
 		} else {
 			// Either has +, -, or nothing (positive)
 			if(str.startsWith("+")) {
@@ -418,7 +423,12 @@ public class E8Assembler {
 		if(labels.containsKey(str)) {
 			offset = labels.get(str) - location;
 			
-			if(offset < 0) instruction |= 0b00000100_00000000;
+			if(offset < 0) { // Absolute value of offset, move sign to proper place
+				instruction |= 0b00000100_00000000;
+				offset = -offset;
+			}
+			
+			offset &= 0x3F;	// keep to 6 bits
 		} else {
 			// Either has +, -, or nothing (positive)
 			if(str.startsWith("+")) {

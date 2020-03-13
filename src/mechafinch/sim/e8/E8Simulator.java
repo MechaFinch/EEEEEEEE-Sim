@@ -8,6 +8,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.util.ArrayDeque;
+import java.util.Random;
+
+import mechafinch.sim.test.TestUtil;
 
 /**
  * The class containing the simulator for E8
@@ -34,6 +37,8 @@ public class E8Simulator {
 	
 	public BufferedReader inputStream;	//Inputstream used by interrupts
 	public BufferedWriter outputStream;	//Outputstream used by interrupts
+	
+	public Random rand;	// Random for the random interrupt
 	
 	public int MAX_VALUE,		//Maximum value based on number of bits
 			   ZERO_MASK,		//Bitmask for not complementing during XOR
@@ -86,6 +91,7 @@ public class E8Simulator {
 		cFlag = nCFlag;
 		inputStream = new BufferedReader(new InputStreamReader(nInputStream));
 		outputStream = new BufferedWriter(new OutputStreamWriter(nOutputStream));
+		rand = new Random();
 		
 		//Didn't use separate name oof
 		this.dataLength = dataLength;
@@ -199,7 +205,8 @@ public class E8Simulator {
 	public boolean step() throws IOException {
 		//Flags for later
 		boolean incIP = true;	//Do we need to increment the instruction pointer
-		//  System.out.println(iType);
+		//System.out.println(iType);
+		//System.out.print(String.format("%-11s %s   %-4s ", iType, instruction, instructionPointer));
 		
 		//Execute instruction
 		switch(iType) {
@@ -229,9 +236,9 @@ public class E8Simulator {
 				break;
 				
 			case MOV_INDIR:
-				reg = E8Util.getRegister(instruction, 6);									//S/D register @ 8-9
-				sReg = E8Util.getRegister(instruction, 8);									//Address register @ 6-7
-				addr = registers[sReg] + Integer.parseInt(instruction.substring(10), 2);	//Offset @ 0-5
+				reg = E8Util.getRegister(instruction, 6);												//S/D register @ 8-9
+				sReg = E8Util.getRegister(instruction, 8);												//Address register @ 6-7
+				addr = (registers[sReg] + Integer.parseInt(instruction.substring(10), 2)) & MAX_VALUE;	//Offset @ 0-5
 				
 				if(instruction.charAt(5) == '0') {	//0 if loading
 					registers[reg] = RAM[addr];
@@ -555,6 +562,14 @@ public class E8Simulator {
 			default: //NOP
 		}
 		
+		/*
+		System.out.print(TestUtil.hexString(registers, dataLength).toUpperCase() + "     ");
+		TestUtil.dumpSegment(this, 0, 3);
+		System.out.print("     ");
+		TestUtil.dumpSegment(this, 11, 22);
+		System.out.println();
+		*/
+		
 		//Load next instruction
 		if(incIP) instructionPointer = (instructionPointer + 1) & ADDRESS_MASK;
 		updateInstruction();
@@ -594,6 +609,10 @@ public class E8Simulator {
 			case "000100":	//Output integer from register
 				outputStream.write(Integer.toString(signExtend(registers[register]))); // Sign extended to properly display negative values
 				outputStream.flush();
+				break;
+				
+			case "000101":	// Set register to random integer
+				registers[register] = rand.nextInt() & MAX_VALUE;
 				break;
 				
 			default:	//Unknown interrupt = NOP

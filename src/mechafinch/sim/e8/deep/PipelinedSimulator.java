@@ -49,9 +49,9 @@ public class PipelinedSimulator extends E8Simulator {
 		cyclesPer = 0;
 		incrementIP = true;
 		
-		// Create the stages
+		// Create the stages with whatever they need
 		fetchStage = new FetchStage(this, decodeStage);
-		decodeStage = new DecodeStage(this, executionStage);
+		decodeStage = new DecodeStage(this, fetchStage, executionStage, groupings);
 		executionStage = new ExecutionStage(this);
 		accessStage = new AccessStage(this);
 		writebackStage = new WritebackStage(this);

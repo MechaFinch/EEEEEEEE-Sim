@@ -33,6 +33,13 @@ public class DataDependency {
 	}
 	
 	/**
+	 * Returns the group this dependency is a part of
+	 * 
+	 * @return
+	 */
+	public int getLocation() { return location; }
+	
+	/**
 	 * Updates the location of the depenency
 	 * 
 	 * @param groups Array of groups

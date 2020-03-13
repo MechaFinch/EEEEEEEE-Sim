@@ -20,7 +20,7 @@ public class E8SimTest {
 		/*
 		 * Assemble
 		 */
-		BufferedReader br = new BufferedReader(new FileReader("asm_tests/is prime mul.txt"));
+		BufferedReader br = new BufferedReader(new FileReader("asm_tests/sort.txt"));
 		List<String> linesList = br.lines().collect(Collectors.toList());
 		br.close();
 		
@@ -66,20 +66,21 @@ public class E8SimTest {
 			rom[i / 4] = Integer.parseInt(romString.substring(i, i + 4), 16);
 		}
 		
-		//E8Simulator testSim = new E8Simulator(ram, rom, 16);
+		E8Simulator testSim = new E8Simulator(ram, rom, 16);
 		
 		// Pipelined simulator without pipelining so we don't have do deal with it
-		PipelinedSimulator testSim = new PipelinedSimulator(ram, rom, new int[][]{{0, 4}});
+		//PipelinedSimulator testSim = new PipelinedSimulator(ram, rom, new int[][]{{0, 4}});
 		
 		//Execute order 66
 		int i = 0;
-		for(; i < 15_000_000 && testSim.step(); i++);
+		for(; i < 2_000_000 && testSim.step(); i++);
 		
 		//Dump state, execute, dump again
 		//TestUtil.dumpState(testSim);
 		//testSim.step();
 		System.out.println();
 		TestUtil.dumpState(testSim);
-		System.out.println(i);
+		TestUtil.dumpSegment(testSim, 11, 11 + 0x1000);
+		System.out.println("\n\n" + i);
 	}
 }

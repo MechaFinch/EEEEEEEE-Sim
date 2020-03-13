@@ -1,0 +1,146 @@
+$10100A
+
+###
+
+// Sort some number of random integers starting at 0x0000
+// Sort via shellsort
+
+len = 5_000;
+gapslen = 7;
+gaps* = {301, 132, 57, 23, 10, 4, 1}; // from wikipedia as optimal
+arr* = array(len);
+
+// initalize values
+for(i = 0; i < len; i++) {
+	arr[i] = random();
+}
+
+// Sort values with shellsort
+for(gi = 0; gi < gapslen; gi++) {
+	gap = gaps[gi];
+
+	// insertion sort with gaps for this size
+	for(i = gap; i < len; i++) {
+		temp = arr[i];
+		
+		for(j = i; j >= gap; j -= gap) {
+			ajg = arr[j - gap];
+			
+			if(ajg <= temp) break;
+			
+			arr[j] = ajg;
+		}
+		
+		arr[j] = temp;
+	}
+}
+###
+
+#define const_len_l 0x88
+#define const_len_h 0x13
+#define const_glen 0x07
+
+#define var_i 0
+#define var_j 1
+#define var_gi 2
+#define var_temp 3
+
+#define arr_gaps 4
+#define arr_arr 11
+
+DB arr_gaps 301, 132, 57, 23, 10, 4, 1
+
+; initialize values
+JSR func_load_d_len
+LD C, D
+loop_init:
+	INT 0x14 ; A = rand	; randomize A
+	ST A, [B + arr_arr]	; store in arr
+	ADD B, B, 1		; inc B
+	BLT B, C, loop_init	; continue if B is less than len
+
+; sort with shellsort
+	; A = gap
+	; B = ajg
+	; C = i/j
+	; D = general
+	
+	; A = gi
+	LD A, [var_gi]
+; outermost loop (0)
+loop_sort_0:
+	; gap = gaps[gi]
+	LD A, [arr_gaps + A]
+	
+	; insertion sort loop
+	ST A, [var_i]	; set i in mem
+	LD C, A		; C is I
+	loop_sort_1:
+		; continue if i < len
+		JSR func_load_d_len
+		BLT C, D, loop_sort_1_start
+		JMP loop_sort_1_end
+		
+	loop_sort_1_start:
+		; temp = arr[i]
+		LD D, [arr_arr + C]	; D = arr[i]
+		ST D, [var_temp]	; D is temp
+		
+		; inner sorting loop
+		; C is now J, starts as same val
+		loop_sort_2:
+			; ajg = arr[j - gap]
+			SUB B, C, A		; B = j - gap
+			LD B, [arr_arr + B]	; B is now ajg
+			
+			; break if ajg <= temp
+			BLT B, D, loop_sort_2_end
+			BEQ B, D, loop_sort_2_end
+			
+			; arr[j] = ajg
+			ST B, [arr_arr + C]
+			
+			; j -= gap
+			SUB C, C, A
+			
+			; continue if j >= gap
+			BLT C, A, loop_sort_2_end
+			JMP loop_sort_2
+			
+		loop_sort_2_end:
+		; arr[j] = temp
+		ST D, [arr_arr + C]
+		
+		; i++
+		LD C, [var_i]
+		ADD C, C, 1
+		ST C, [var_i]
+		JMP loop_sort_1
+		
+	loop_sort_1_end:
+	; gi++
+	LD A, [var_gi]
+	LD D, const_glen
+	ADD A, A, 1
+	ST A, [var_gi]
+	
+	; continue if gi < gapslen
+	BLT A, D, loop_sort_0
+loop_sort_0_end:
+
+; we're done
+INT 0x00
+
+; loads D with the len constant
+func_load_d_len:
+	PUSH A
+	PUSH B
+	
+	LD A, const_len_h
+	LD B, const_len_l
+	SHL A, A, 0x08	; shift to upper byte
+	ADD D, A, B	; put in D
+	
+	POP B
+	POP A
+	RET

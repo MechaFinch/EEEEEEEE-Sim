@@ -29,6 +29,23 @@ public class TestUtil {
 	}
 	
 	/**
+	 * Dumps a segment of memory
+	 * 
+	 * @param sim The instance of the simulator
+	 * @param start Start address
+	 * @param end End address
+	 */
+	public static void dumpSegment(E8Simulator sim, int start, int end) {
+		
+		// Get from memory
+		int[] memSeg = new int[end - start]; 
+		System.arraycopy(sim.RAM, start, memSeg, 0, end - start);
+		
+		// Print it
+		System.out.print(hexString(memSeg, sim.dataLength).toUpperCase());
+	}
+	
+	/**
 	 * Insert an array of integers at the start of a larger one
 	 * 
 	 * @param source The array to insert
