@@ -16,6 +16,8 @@ import mechafinch.sim.e8.deep.PipelinedSimulator;
  */
 public class DecodeStage extends PipelineStage {
 	
+	private int groupIndex;
+	
 	private int[][] groups;
 	
 	private FetchStage fetch;
@@ -31,6 +33,13 @@ public class DecodeStage extends PipelineStage {
 		this.groups = groups;
 		
 		dependencies = new ArrayList<>();
+		
+		// We need to know which group we're in
+		for(int i = 0; i < groups.length; i++) {
+			if(groups[i][1] >= 1) { // Find the first group containing decode
+				groupIndex = i;
+			}
+		}
 	}
 	
 	@Override
@@ -45,14 +54,10 @@ public class DecodeStage extends PipelineStage {
 			 * Look for dependencies that prevent this instruction from continuing
 			 * If there is a dependency, bubble the Fetch Stage which will implicitly bubble subsequent stages (including this one) until it has passed
 			 * Dependencies have a time limit
+			 * 
+			 * This stuff will make us wait until this instruction is ready to be executed, and invalidates the current data
 			 */
 			int timeToBubble = 0;
-			
-			// Deal with special stuff
-			if(isSpecialType()) {
-				// TODO: implement
-				// For all, bubble until writeback occurs (where IP is set by jumps and branches, and when interrupts are run)
-			}
 			
 			// Deal with generic stuff
 			for(DataDependency dependency : dependencies) {
@@ -66,11 +71,25 @@ public class DecodeStage extends PipelineStage {
 			}
 			
 			//Bubble until the dependencies are cleared
-			fetch.addBubbles(timeToBubble);
+			if(timeToBubble > 0) {
+				fetch.addBubbles(timeToBubble);
+				hasData = false;
+				
+				// Since fetch will increment the IP, decrement it to get the same instruction once bubbling finishes
+				// This may cause problems later but asdkfjhasdkjfhaskdjfkasjdf
+				sim.instructionPointer--;
+			} else { // This instruciton is ready to go. If its a special type, we need to have other things wait while it executes
+				if(isSpecialType()) {
+					// For all, bubble until writeback occurs (where IP is set by jumps and branches, and when interrupts are run)
+					fetch.addBubbles(groups.length - groupIndex);
+				}
+			}
 		}
 		
 		// Decrement dependency timers
-		for(DataDependency d : dependencies) d.updateLocation(groups);
+		for(int i = 0; i < dependencies.size(); i++) 
+			if(dependencies.get(i).updateLocation(groups)) 
+				dependencies.remove(i--);
 	}
 	
 	/**
@@ -99,12 +118,15 @@ public class DecodeStage extends PipelineStage {
 	public void receiveData(String inst, Instructions type) {
 		instructionBinary = inst;
 		instructionType = type;
+		
+		// Determine if we have data
+		hasData = instructionBinary.equals("");
 	}
 
 	@Override
 	public void passData() {
 		if(!hasData) exec.receiveNoData();
-		
+		// else exec.recieveData(inst, type)
 	}
 	
 }

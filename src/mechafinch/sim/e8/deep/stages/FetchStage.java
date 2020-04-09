@@ -50,13 +50,15 @@ public class FetchStage extends PipelineStage {
 		if(timeBubbled > 0) {
 			decode.receiveData("", Instructions.NOP);
 			timeBubbled--;
+			
+			if(timeBubbled > 0) return; // If we're passing data again next time, we need to pass this 
 		}
 		
 		// Instruction type is determined here btw
 		decode.receiveData(instructionBinary, Instructions.getEnumeratedInstruction(instructionBinary));
 		
 		// Increment IP if needed, only done once data from the old ip was passed and necessity determined
-		if(sim.incrementIP) sim.instructionPointer++;
+		sim.instructionPointer++;
 	}
 	
 }

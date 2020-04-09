@@ -124,11 +124,18 @@ public class PipelinedSimulator extends E8Simulator {
 			}
 		}
 		
+		// Update running time
+		cyclesElapsed += cyclesPer;
+		
 		// Can we continue?
 		// TODO: can continue flag
 		
-		// Pass data between groups
-		for(int gri = 0; gri < groupings.length; gri++) {
+		/*
+		 * Pass data between groups
+		 * This is done backwards because some stages set flags when receiving
+		 * This way they can use those flags for sending data
+		 */
+		for(int gri = groupings.length - 1; gri >= 0; gri--) {
 			stages.get(groupings[gri][1]).passData();
 		}
 		
