@@ -1,5 +1,6 @@
 package mechafinch.sim.e8.deep.stages;
 
+import mechafinch.sim.e8.Instructions;
 import mechafinch.sim.e8.deep.PipelineStage;
 import mechafinch.sim.e8.deep.PipelinedSimulator;
 
@@ -20,6 +21,19 @@ public class AccessStage extends PipelineStage {
 	@Override
 	public void execute() {
 		// TODO Auto-generated method stub
+	}
+	
+	/**
+	 * Receives necessary data
+	 * 
+	 * @param inst The instruction binary
+	 * @param instructionType The enumerated type
+	 * @param genericData Generic data created by execute
+	 * @param register The register to use
+	 * @param willBranch True if we will jump
+	 */
+	public void receiveData(String inst, Instructions instructionType, int genericData, int register, boolean willBranch) {
+		
 	}
 
 	@Override

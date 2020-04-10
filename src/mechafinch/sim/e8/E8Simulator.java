@@ -287,7 +287,7 @@ public class E8Simulator {
 				break;
 				
 			case MUL:
-				sReg = E8Util.getRegister(instruction,  10); // Register @ 4-5
+				sReg = E8Util.getRegister(instruction, 10);  // Register @ 4-5
 				dReg = E8Util.getRegister(instruction, 8);	 // Register @ 6-7
 				bVal = 0;
 				
@@ -309,7 +309,7 @@ public class E8Simulator {
 				break;
 			
 			case DIV:
-				sReg = E8Util.getRegister(instruction,  10); // Register @ 4-5
+				sReg = E8Util.getRegister(instruction, 10);  // Register @ 4-5
 				dReg = E8Util.getRegister(instruction, 8);	 // Register @ 6-7
 				bVal = 0;
 				
@@ -328,7 +328,7 @@ public class E8Simulator {
 				break;
 				
 			case MOD:
-				sReg = E8Util.getRegister(instruction,  10); // Register @ 4-5
+				sReg = E8Util.getRegister(instruction, 10);  // Register @ 4-5
 				dReg = E8Util.getRegister(instruction, 8);	 // Register @ 6-7
 				bVal = 0;
 				
@@ -585,7 +585,7 @@ public class E8Simulator {
 	 * @return True if the interrupt was "halt"
 	 * @throws IOException 
 	 */
-	private boolean interrupt(String code) throws IOException {
+	public boolean interrupt(String code) throws IOException {
 		int register = E8Util.getRegister(code, 6);	//we'll probably need this
 		
 		//Code is 6 most significant bits, register is 2 least significant bits

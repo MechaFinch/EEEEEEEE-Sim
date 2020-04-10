@@ -21,7 +21,8 @@ public class PipelinedSimulator extends E8Simulator {
 				cyclesPer;
 	
 	// Interface stuff
-	public boolean incrementIP;
+	public boolean incrementIP,
+				   willHalt;
 	
 	// The properly typed stages
 	private FetchStage fetchStage;
@@ -50,11 +51,15 @@ public class PipelinedSimulator extends E8Simulator {
 		incrementIP = true;
 		
 		// Create the stages with whatever they need
-		fetchStage = new FetchStage(this, decodeStage);
-		decodeStage = new DecodeStage(this, fetchStage, executionStage, groupings);
-		executionStage = new ExecutionStage(this);
-		accessStage = new AccessStage(this);
+		// Also the right order
 		writebackStage = new WritebackStage(this);
+		accessStage = new AccessStage(this);
+		executionStage = new ExecutionStage(this, accessStage);
+		decodeStage = new DecodeStage(this, executionStage, groupings);
+		fetchStage = new FetchStage(this, decodeStage);
+		
+		// Give decode its fetch
+		decodeStage.setFetchStage(fetchStage);
 		
 		// Place stages in generic list
 		stages = new ArrayList<>();
@@ -128,7 +133,11 @@ public class PipelinedSimulator extends E8Simulator {
 		cyclesElapsed += cyclesPer;
 		
 		// Can we continue?
-		// TODO: can continue flag
+		if(willHalt) {
+			// halt here
+			System.out.println("\nExecution completed in " + cyclesElapsed + " cycles.");
+			return false;
+		}
 		
 		/*
 		 * Pass data between groups
@@ -141,6 +150,8 @@ public class PipelinedSimulator extends E8Simulator {
 		
 		return true;
 	}
+	
+	public int getElapsedCycles() { return cyclesElapsed; }
 	
 	@Override
 	public String getLoadedLocations() {

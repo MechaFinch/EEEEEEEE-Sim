@@ -25,10 +25,9 @@ public class DecodeStage extends PipelineStage {
 	
 	private ArrayList<DataDependency> dependencies;
 	
-	public DecodeStage(PipelinedSimulator sim, FetchStage fetch, ExecutionStage exec, int[][] groups) {
+	public DecodeStage(PipelinedSimulator sim, ExecutionStage exec, int[][] groups) {
 		super(sim);
 		
-		this.fetch = fetch;
 		this.exec = exec;
 		this.groups = groups;
 		
@@ -41,6 +40,9 @@ public class DecodeStage extends PipelineStage {
 			}
 		}
 	}
+	
+	// Because this will be constructed before the fetch stage is, we need to get this afterwards
+	public void setFetchStage(FetchStage f) { fetch = f; }
 	
 	@Override
 	public void execute() {
@@ -125,8 +127,8 @@ public class DecodeStage extends PipelineStage {
 
 	@Override
 	public void passData() {
-		if(!hasData) exec.receiveNoData();
-		// else exec.recieveData(inst, type)
+		if(hasData) exec.receiveData(instructionBinary, instructionType);
+		else exec.receiveNoData();
 	}
 	
 }
