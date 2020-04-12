@@ -11,35 +11,67 @@ import mechafinch.sim.e8.deep.PipelinedSimulator;
  */
 public class AccessStage extends PipelineStage {
 	
+	// This to pass to writeback
+	private int genericData,
+				register;
 	
+	private boolean willBranch;
 	
-	public AccessStage(PipelinedSimulator sim) {
+	// Our stuff
+	private WritebackStage writeback;
+	
+	public AccessStage(PipelinedSimulator sim, WritebackStage writeback) {
 		super(sim);
-		// TODO Auto-generated constructor stub
+		
+		this.writeback = writeback;
+		
+		genericData = 0;
+		register = 0;
+		willBranch = false;
 	}
 	
 	@Override
 	public void execute() {
-		// TODO Auto-generated method stub
+		if(!hasData) return;
+		
+		// Do them accesses
+		// genericData is set to the address for the memory access MOVs and register to the source/destination register 
+		switch(instructionType) {
+			case MOV_INDEX:
+			case MOV_INDIR:
+				if(instructionBinary.charAt(5) == '0') { // Load
+					genericData = sim.RAM[genericData];
+				} else { // Store
+					sim.RAM[genericData] = sim.registers[register];
+				}
+				break;
+				
+			default:
+		}
 	}
 	
 	/**
 	 * Receives necessary data
 	 * 
 	 * @param inst The instruction binary
-	 * @param instructionType The enumerated type
+	 * @param type The enumerated type
 	 * @param genericData Generic data created by execute
 	 * @param register The register to use
 	 * @param willBranch True if we will jump
 	 */
-	public void receiveData(String inst, Instructions instructionType, int genericData, int register, boolean willBranch) {
+	public void receiveData(String inst, Instructions type, int genericData, int register, boolean willBranch) {
+		instructionBinary = inst;
+		instructionType = type;
 		
+		this.genericData = genericData;
+		this.register = register;
+		this.willBranch = willBranch;
 	}
 
 	@Override
 	public void passData() {
-		// TODO Auto-generated method stub
-		
+		if(hasData) writeback.receiveData(instructionBinary, instructionType, genericData, register, willBranch);
+		else writeback.receiveNoData();
 	}
 	
 	/**

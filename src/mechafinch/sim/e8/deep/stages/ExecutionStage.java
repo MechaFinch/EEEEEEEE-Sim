@@ -37,22 +37,6 @@ public class ExecutionStage extends PipelineStage {
 		if(!hasData) return;
 		
 		/*
-		 * Address Resolution
-		 */
-		switch(instructionType) {
-			case MOV_INDIR:
-				genericData = resolveAddress(8, 10);
-				break;
-			
-			case JMP_IND:
-			case JSR_IND:
-				genericData = resolveAddress(6, 8);
-				break;
-				
-			default:
-		}
-		
-		/*
 		 * Branch Resolution
 		 */
 		int valA = getRegisterValue(6),
@@ -61,27 +45,58 @@ public class ExecutionStage extends PipelineStage {
 		switch(instructionType) {
 			case BEQ:
 				willBranch = valA == valB;
+				genericData = resolveBranchAddress();
 				break;
 				
 			case BLT:
 				willBranch = valA < valB;
+				genericData = resolveBranchAddress();
 				break;
 				
 			case BGT:
 				willBranch = valA > valB;
+				genericData = resolveBranchAddress();
 				break;
 				
 			case BZ:
 				willBranch = valB == 0;
+				genericData = resolveBranchAddress();
 				break;
 				
 			case BNZ:
 				willBranch = valB != 0;
+				genericData = resolveBranchAddress();
 				break;
 				
+				// There's no break so that JSR does extra stuff as well as JMP stuff
+			case JSR_DIR: case JSR_IND:
+				sim.callStack.push(sim.instructionPointer);
+				
 			case JMP_DIR: case JMP_IND:
-			case JSR_DIR: case JSR_IND: case RET:
+				genericData = parseImmediate(6);
 				willBranch = true;
+				break;
+				
+			case RET:
+				genericData = sim.callStack.pop();
+				willBranch = true;
+				break;
+				
+			default:
+		}
+		
+		/*
+		 * Address Resolution
+		 */
+		switch(instructionType) {
+			case MOV_INDIR:
+				genericData = resolveAddress(8, 10);
+				register = E8Util.getRegister(instructionBinary, 6);
+				break;
+			
+			case JMP_IND:
+			case JSR_IND:
+				genericData = resolveAddress(6, 8);
 				break;
 				
 			default:
@@ -266,6 +281,15 @@ public class ExecutionStage extends PipelineStage {
 	private int resolveAddress(int registerIndex, int offsetIndex) {
 		return sim.registers[E8Util.getRegister(instructionBinary, registerIndex)] + 
 			   Integer.parseInt(instructionBinary.substring(offsetIndex), 2);
+	}
+	
+	/**
+	 * Determines the target address of a branch
+	 * 
+	 * @return The resolved address
+	 */
+	private int resolveBranchAddress() {
+		return sim.instructionPointer + (parseImmediate(10) * (instructionBinary.charAt(5) == '0' ? 1 : -1));
 	}
 	
 	/**

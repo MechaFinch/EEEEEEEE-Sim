@@ -1,5 +1,6 @@
 package mechafinch.sim.e8.deep.stages;
 
+import mechafinch.sim.e8.Instructions;
 import mechafinch.sim.e8.deep.PipelineStage;
 import mechafinch.sim.e8.deep.PipelinedSimulator;
 
@@ -10,20 +11,69 @@ import mechafinch.sim.e8.deep.PipelinedSimulator;
  */
 public class WritebackStage extends PipelineStage {
 	
+	private int genericData,
+				register;
+	
+	boolean willBranch;
+	
 	public WritebackStage(PipelinedSimulator sim) {
 		super(sim);
-		// TODO Auto-generated constructor stub
+		
+		genericData = 0;
+		register = 0;
+		willBranch = false;
 	}
 	
 	@Override
 	public void execute() {
-		// TODO Auto-generated method stub
+		if(!hasData) return;
+		
+		switch(instructionType) {
+			case MOV_IMM: case MOV_REG:
+			case ADD: case SUB: case MUL: case DIV: case MOD:
+			case AND: case OR: case XOR: case NOT: case BSL: case BSR:
+			case PUSH: case POP: case PEEK:
+				sim.registers[register] = genericData;
+				break;
+				
+			case MOV_INDEX:
+			case MOV_INDIR:
+				if(instructionBinary.charAt(5) == '0') {
+					sim.registers[register] = genericData;
+				}
+				break;
+				
+			case BEQ: case BLT: case BGT: case BZ: case BNZ:
+			case JMP_DIR: case JMP_IND:
+			case JSR_DIR: case JSR_IND: case RET:
+				if(willBranch) sim.instructionPointer = genericData;
+				break;
+				
+			default:
+		}
+	}
+	
+	/**
+	 * Receives necessary data
+	 * 
+	 * @param inst Instruction binary
+	 * @param type Enumerated data
+	 * @param genericData Generic data
+	 * @param register Destination register
+	 * @param willBranch True if we jump
+	 */
+	public void receiveData(String inst, Instructions type, int genericData, int register, boolean willBranch) {
+		instructionBinary = inst;
+		instructionType = type;
+		
+		this.genericData = genericData;
+		this.register = register;
+		this.willBranch = willBranch;
 	}
 
 	@Override
 	public void passData() {
-		// TODO Auto-generated method stub
-		
+		// We don't pass anything
 	}
 	
 }
