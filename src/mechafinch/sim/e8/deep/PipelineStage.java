@@ -45,6 +45,8 @@ public abstract class PipelineStage {
 	 * Specifically receives no data
 	 */
 	public void receiveNoData() {
+		instructionBinary = "";
+		instructionType = Instructions.NOP;
 		hasData = false;
 	}
 }

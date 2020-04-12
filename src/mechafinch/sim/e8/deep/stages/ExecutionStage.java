@@ -321,6 +321,8 @@ public class ExecutionStage extends PipelineStage {
 	public void receiveData(String inst, Instructions type) {
 		instructionBinary = inst;
 		instructionType = type;
+		
+		hasData = true;
 	}
 
 	@Override

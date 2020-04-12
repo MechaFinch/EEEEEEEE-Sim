@@ -46,7 +46,7 @@ public class WritebackStage extends PipelineStage {
 			case BEQ: case BLT: case BGT: case BZ: case BNZ:
 			case JMP_DIR: case JMP_IND:
 			case JSR_DIR: case JSR_IND: case RET:
-				if(willBranch) sim.instructionPointer = genericData;
+				if(willBranch) sim.instructionPointer = genericData & sim.ADDRESS_MASK;
 				break;
 				
 			default:
@@ -69,6 +69,8 @@ public class WritebackStage extends PipelineStage {
 		this.genericData = genericData;
 		this.register = register;
 		this.willBranch = willBranch;
+		
+		hasData = true;
 	}
 
 	@Override

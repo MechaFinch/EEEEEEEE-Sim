@@ -37,6 +37,7 @@ public class DecodeStage extends PipelineStage {
 		for(int i = 0; i < groups.length; i++) {
 			if(groups[i][1] >= 1) { // Find the first group containing decode
 				groupIndex = i;
+				break;
 			}
 		}
 	}
@@ -84,6 +85,8 @@ public class DecodeStage extends PipelineStage {
 				if(isSpecialType()) {
 					// For all, bubble until writeback occurs (where IP is set by jumps and branches, and when interrupts are run)
 					fetch.addBubbles(groups.length - groupIndex);
+				} else if(instructionType != Instructions.NOP) { // Create dependencies for the instruction
+					// TODO: implement dependency generation
 				}
 			}
 		}
@@ -121,8 +124,7 @@ public class DecodeStage extends PipelineStage {
 		instructionBinary = inst;
 		instructionType = type;
 		
-		// Determine if we have data
-		hasData = instructionBinary.equals("");
+		hasData = true;
 	}
 
 	@Override
@@ -131,4 +133,12 @@ public class DecodeStage extends PipelineStage {
 		else exec.receiveNoData();
 	}
 	
+	/**
+	 * Gets the current dependencies
+	 * 
+	 * @return
+	 */
+	public String getDependenciesString() {
+		return dependencies.toString();
+	}
 }

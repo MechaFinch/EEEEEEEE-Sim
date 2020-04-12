@@ -112,4 +112,9 @@ public class DataDependency {
 				return false;
 		}
 	}
+	
+	@Override
+	public String toString() {
+		return descriptor + ":" + location;
+	}
 }

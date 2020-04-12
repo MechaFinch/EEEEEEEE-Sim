@@ -66,6 +66,8 @@ public class AccessStage extends PipelineStage {
 		this.genericData = genericData;
 		this.register = register;
 		this.willBranch = willBranch;
+		
+		hasData = true;
 	}
 
 	@Override

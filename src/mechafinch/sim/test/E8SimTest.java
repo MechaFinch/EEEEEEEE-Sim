@@ -66,14 +66,17 @@ public class E8SimTest {
 			rom[i / 4] = Integer.parseInt(romString.substring(i, i + 4), 16);
 		}
 		
-		E8Simulator testSim = new E8Simulator(ram, rom, 16);
+		//E8Simulator testSim = new E8Simulator(ram, rom, 16);
 		
 		// Pipelined simulator without pipelining so we don't have do deal with it
 		//PipelinedSimulator testSim = new PipelinedSimulator(ram, rom, new int[][]{{0, 4}});
 		
+		// Pipelined simulator with full pipelining
+		PipelinedSimulator testSim = new PipelinedSimulator(ram, rom);
+		
 		//Execute order 66
 		int i = 0;
-		for(; i < 2_000_000 && testSim.step(); i++);
+		for(; i < 200 && testSim.step(); i++);
 		
 		//Dump state, execute, dump again
 		//TestUtil.dumpState(testSim);

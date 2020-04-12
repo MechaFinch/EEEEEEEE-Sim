@@ -33,6 +33,7 @@ public class FetchStage extends PipelineStage {
 		// We can do things without caring for bubbles but we can't give that data
 		// Nab that instruction and store it until we pass our data
 		instructionBinary = String.format("%16s", Integer.toBinaryString(sim.ROM[sim.instructionPointer])).replace(' ', '0');
+		instructionType = Instructions.getEnumeratedInstruction(instructionBinary);
 	}
 	
 	/**
@@ -48,17 +49,18 @@ public class FetchStage extends PipelineStage {
 	public void passData() {
 		// If we're bubbled, we have no data
 		if(timeBubbled > 0) {
-			decode.receiveData("", Instructions.NOP);
+			decode.receiveNoData();
 			timeBubbled--;
-			
-			if(timeBubbled > 0) return; // If we're passing data again next time, we need to pass this 
+			return; 
 		}
 		
-		// Instruction type is determined here btw
-		decode.receiveData(instructionBinary, Instructions.getEnumeratedInstruction(instructionBinary));
+		decode.receiveData(instructionBinary, instructionType);
 		
 		// Increment IP if needed, only done once data from the old ip was passed and necessity determined
 		sim.instructionPointer++;
+		sim.instructionPointer &= sim.ADDRESS_MASK;
 	}
+	
+	public int getTimeBubbled() { return timeBubbled; }
 	
 }

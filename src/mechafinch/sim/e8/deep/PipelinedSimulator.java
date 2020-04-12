@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import mechafinch.sim.e8.E8Simulator;
 import mechafinch.sim.e8.deep.stages.*;
+import mechafinch.sim.test.TestUtil;
 
 /**
  * An E8Simulator that simulates pipelining
@@ -129,6 +130,10 @@ public class PipelinedSimulator extends E8Simulator {
 			}
 		}
 		
+		// Debug time
+		System.out.println("Stepped: " + getStageReadout() + "     " + TestUtil.hexString(registers, 16) + "     " + fetchStage.getTimeBubbled() + "     " + decodeStage.getDependenciesString());
+		System.out.println("         " + getStageReadout().replaceAll(".", "-"));
+		
 		// Update running time
 		cyclesElapsed += cyclesPer;
 		
@@ -149,6 +154,17 @@ public class PipelinedSimulator extends E8Simulator {
 		}
 		
 		return true;
+	}
+	
+	/**
+	 * Gives a visualization of the current stages
+	 * 
+	 * @return
+	 */
+	public String getStageReadout() {
+		return String.format("%-10s | %-10s | %-10s | %-10s | %-10s", fetchStage.instructionType, decodeStage.instructionType,
+																	  executionStage.instructionType, accessStage.instructionType,
+																	  writebackStage.instructionType);
 	}
 	
 	public int getElapsedCycles() { return cyclesElapsed; }
