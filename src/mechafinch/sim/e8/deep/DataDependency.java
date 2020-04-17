@@ -24,7 +24,6 @@ public class DataDependency {
 	 * <p> Character indicating if it is a register or memory location, then the register number or the address, or 'all' if the write is indirect
 	 * 
 	 * @param descriptor
-	 * @param readAllowed true if the location can be read from
 	 * @param location the index of the stage group to start in
 	 */
 	public DataDependency(String descriptor, int location) {

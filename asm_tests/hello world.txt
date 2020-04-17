@@ -1,3 +1,10 @@
+$10100A ; bit header
+
+###
+data = "Hello, World!\n"
+print(data);
+###
+
 ; hello world time
 
 #define cout_a 0x0C

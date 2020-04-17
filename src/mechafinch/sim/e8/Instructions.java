@@ -47,4 +47,13 @@ public enum Instructions {
 		
 		return NOP;
 	}
+	
+	@Override
+	public String toString() {
+		if(this == NOP) {
+			return "";
+		}
+		
+		return super.toString();
+	}
 }

@@ -18,14 +18,16 @@ public class ExecutionStage extends PipelineStage {
 	private int genericData, // May be an address, result, etc
 				register;	 // Usually destination register, sometimes source
 	
-	private boolean willBranch; 
+	private boolean willBranch,		// If we take the branch
+					falseIncrement; // True if instructionPointer is incremented too early for JSRs
 	
 	private AccessStage access;
 	
-	public ExecutionStage(PipelinedSimulator sim, AccessStage access) {
+	public ExecutionStage(PipelinedSimulator sim, AccessStage access, boolean falseIncrement) {
 		super(sim);
 		
 		this.access = access;
+		this.falseIncrement = falseIncrement;
 		
 		genericData = 0;
 		register = 0;
@@ -70,7 +72,7 @@ public class ExecutionStage extends PipelineStage {
 				
 				// There's no break so that JSR does extra stuff as well as JMP stuff
 			case JSR_DIR: case JSR_IND:
-				sim.callStack.push(sim.instructionPointer);
+				sim.callStack.push(sim.instructionPointer - (falseIncrement ? 1 : 0)); // IP increments, undo that, unless it doesn't increment
 				
 			case JMP_DIR: case JMP_IND:
 				genericData = parseImmediate(6);
@@ -289,7 +291,7 @@ public class ExecutionStage extends PipelineStage {
 	 * @return The resolved address
 	 */
 	private int resolveBranchAddress() {
-		return sim.instructionPointer + (parseImmediate(10) * (instructionBinary.charAt(5) == '0' ? 1 : -1));
+		return sim.instructionPointer + (parseImmediate(10) * (instructionBinary.charAt(5) == '0' ? 1 : -1)) - 1;
 	}
 	
 	/**

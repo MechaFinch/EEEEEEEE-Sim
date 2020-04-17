@@ -3,6 +3,7 @@ package mechafinch.sim.e8.deep.stages;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import mechafinch.sim.e8.E8Util;
 import mechafinch.sim.e8.Instructions;
 import mechafinch.sim.e8.deep.DataDependency;
 import mechafinch.sim.e8.deep.PipelineStage;
@@ -20,16 +21,19 @@ public class DecodeStage extends PipelineStage {
 	
 	private int[][] groups;
 	
+	private boolean dependencyIssue;
+	
 	private FetchStage fetch;
 	private ExecutionStage exec;
 	
 	private ArrayList<DataDependency> dependencies;
 	
-	public DecodeStage(PipelinedSimulator sim, ExecutionStage exec, int[][] groups) {
+	public DecodeStage(PipelinedSimulator sim, ExecutionStage exec, int[][] groups, boolean dependencyIssue) {
 		super(sim);
 		
 		this.exec = exec;
 		this.groups = groups;
+		this.dependencyIssue = dependencyIssue;
 		
 		dependencies = new ArrayList<>();
 		
@@ -67,7 +71,7 @@ public class DecodeStage extends PipelineStage {
 				if(dependency.cannotRead(instructionBinary, instructionType)) {	// We can't read with this instruction, bubble accordingly 
 					// Bubble until writeback has gone through
 					// If a dependency is in the last group, it will write back during this pipeline cycle and is invalidated
-					int thisBubble = groups.length - dependency.getLocation() - 1;
+					int thisBubble = groups.length - dependency.getLocation() - (dependencyIssue ? 0 : 1);
 					
 					if(thisBubble > timeToBubble) timeToBubble = thisBubble;
 				}
@@ -84,9 +88,39 @@ public class DecodeStage extends PipelineStage {
 			} else { // This instruciton is ready to go. If its a special type, we need to have other things wait while it executes
 				if(isSpecialType()) {
 					// For all, bubble until writeback occurs (where IP is set by jumps and branches, and when interrupts are run)
-					fetch.addBubbles(groups.length - groupIndex);
+					if(groups.length != 1) fetch.addBubbles(groups.length - groupIndex);
 				} else if(instructionType != Instructions.NOP) { // Create dependencies for the instruction
-					// TODO: implement dependency generation
+					switch(instructionType) {
+						// Things that always write to the register at 6
+						case MOV_IMM:
+						case MOV_REG:
+							dependencies.add(new DataDependency("r" + E8Util.getRegister(instructionBinary, 6), groupIndex));
+							break;
+							
+						// Either writes to the register at 6 or memory
+						case MOV_INDEX:
+						case MOV_INDIR:
+							if(instructionBinary.charAt(5) == '0') { // Writes to register
+								dependencies.add(new DataDependency("r" + E8Util.getRegister(instructionBinary, 6), groupIndex));
+							} else { // Writes to memory
+								if(instructionType == Instructions.MOV_INDEX) { // Specific location
+									dependencies.add(new DataDependency("m" + Integer.parseInt(instructionBinary.substring(8), 2), groupIndex));
+								} else { // Somewhere
+									dependencies.add(new DataDependency("mall", groupIndex));
+								}
+							}
+							break;
+							
+						// Writes to the register at 8
+						case ADD: case SUB: case MUL: case DIV: case MOD:
+						case AND: case OR: case XOR: case NOT: case BSL: case BSR:
+						case POP: case PEEK:
+							dependencies.add(new DataDependency("r" + E8Util.getRegister(instructionBinary, 8), groupIndex));
+							break;
+							
+						default:
+							break;
+					}
 				}
 			}
 		}

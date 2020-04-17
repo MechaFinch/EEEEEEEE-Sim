@@ -32,7 +32,7 @@ public class WritebackStage extends PipelineStage {
 			case MOV_IMM: case MOV_REG:
 			case ADD: case SUB: case MUL: case DIV: case MOD:
 			case AND: case OR: case XOR: case NOT: case BSL: case BSR:
-			case PUSH: case POP: case PEEK:
+			case POP: case PEEK:
 				sim.registers[register] = genericData;
 				break;
 				

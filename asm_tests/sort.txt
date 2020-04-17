@@ -37,8 +37,8 @@ for(gi = 0; gi < gapslen; gi++) {
 ###
 
 ; 0x1388
-#define const_len_l 0x0A
-#define const_len_h 0x00
+#define const_len_l 0xF4
+#define const_len_h 0x01
 #define const_glen 0x07
 
 #define var_i 0

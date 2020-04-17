@@ -51,32 +51,14 @@ public class PipelinedSimulator extends E8Simulator {
 		cyclesPer = 0;
 		incrementIP = true;
 		
-		// Create the stages with whatever they need
-		// Also the right order
-		writebackStage = new WritebackStage(this);
-		accessStage = new AccessStage(this, writebackStage);
-		executionStage = new ExecutionStage(this, accessStage);
-		decodeStage = new DecodeStage(this, executionStage, groupings);
-		fetchStage = new FetchStage(this, decodeStage);
-		
-		// Give decode its fetch
-		decodeStage.setFetchStage(fetchStage);
-		
-		// Place stages in generic list
-		stages = new ArrayList<>();
-		stages.add(fetchStage);
-		stages.add(decodeStage);
-		stages.add(executionStage);
-		stages.add(accessStage);
-		stages.add(writebackStage);
-		
 		// Validate groups
 		ArrayList<Integer> usedStages = new ArrayList<>();
+		boolean dependencyBubbleIssue = false;
 		
 		for(int i = 0, pe = -1; i < groupings.length; i++) {
 			int start = groupings[i][0],
 				end = groupings[i][1],
-				len = end - start;
+				len = end - start + 1;
 			
 			// Set cyclesPer to the longest stage's length
 			if(len > cyclesPer) cyclesPer = len;
@@ -93,7 +75,29 @@ public class PipelinedSimulator extends E8Simulator {
 				if(usedStages.contains(j)) throw new IllegalArgumentException(String.format("Duplicate stage index in (%s - %s): %s", start, end, j));
 				usedStages.add(j);
 			}
+			
+			// Check for dependency issue
+			if(start <= 1 && end >= 2 && end < 4) dependencyBubbleIssue = true;
 		}
+		
+		// Create the stages with whatever they need
+		// Also the right order
+		writebackStage = new WritebackStage(this);
+		accessStage = new AccessStage(this, writebackStage);
+		executionStage = new ExecutionStage(this, accessStage, groupings[0][1] == 0);
+		decodeStage = new DecodeStage(this, executionStage, groupings, dependencyBubbleIssue);
+		fetchStage = new FetchStage(this, decodeStage);
+		
+		// Give decode its fetch
+		decodeStage.setFetchStage(fetchStage);
+		
+		// Place stages in generic list
+		stages = new ArrayList<>();
+		stages.add(fetchStage);
+		stages.add(decodeStage);
+		stages.add(executionStage);
+		stages.add(accessStage);
+		stages.add(writebackStage);
 	}
 	
 	/**
@@ -130,17 +134,21 @@ public class PipelinedSimulator extends E8Simulator {
 			}
 		}
 		
-		// Debug time
-		System.out.println("Stepped: " + getStageReadout() + "     " + TestUtil.hexString(registers, 16) + "     " + fetchStage.getTimeBubbled() + "     " + decodeStage.getDependenciesString());
-		System.out.println("         " + getStageReadout().replaceAll(".", "-"));
-		
 		// Update running time
 		cyclesElapsed += cyclesPer;
+		
+		// Debug time
+		//System.out.println(String.format("Cycle %-5s ", cyclesElapsed + ":") + getStageReadout() + "     " + TestUtil.hexString(registers, 16) + "     " + fetchStage.getTimeBubbled() + "     " + decodeStage.getDependenciesString());
+		//System.out.println("            " + getStageReadout().replaceAll(".", "-"));
+		
+		//System.out.print(String.format("Cycle %-5s ", cyclesElapsed + ":") + TestUtil.hexString(registers, 16) + "     ");
+		//TestUtil.dumpSegment(this, 0, 11 + 0x0008);
+		//System.out.println();
 		
 		// Can we continue?
 		if(willHalt) {
 			// halt here
-			System.out.println("\nExecution completed in " + cyclesElapsed + " cycles.");
+			System.out.println("Execution completed in " + cyclesElapsed + " cycles.");
 			return false;
 		}
 		
